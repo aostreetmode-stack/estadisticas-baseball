@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Estadísticas Baseball</title>
+<title>Estadísticas</title>
 
 <style>
 body{
@@ -21,10 +20,10 @@ body{
   margin-bottom:10px;
 }
 
-.player{
+.card{
   background:#1e293b;
   padding:10px;
-  border-radius:10px;
+  border-radius:12px;
   margin-bottom:10px;
 }
 
@@ -33,6 +32,11 @@ input{
   padding:10px;
   border:none;
   border-radius:8px;
+  margin-bottom:5px;
+}
+
+.stats{
+  font-size:13px;
   margin-bottom:5px;
 }
 
@@ -46,19 +50,21 @@ button{
   padding:10px;
   border:none;
   border-radius:8px;
+  color:white;
   font-weight:bold;
 }
 
 .out{background:red;}
-.hit{background:#ccc;}
+.hit{background:gray;}
 .hr{background:green;}
 
 .reset{
+  width:100%;
   margin-top:10px;
   background:#ccc;
   color:black;
-  width:100%;
 }
+
 </style>
 </head>
 
@@ -71,39 +77,29 @@ button{
 
 <div id="players"></div>
 
+<button onclick="guardarDia()">Guardar día</button>
+<button onclick="verHistorial()">Historial</button>
 <button class="reset" onclick="resetear()">Nueva temporada</button>
 
 <script>
 
-let data = JSON.parse(localStorage.getItem("players")) ||
-Array(16).fill().map(()=>({
-  name:"Jugador",
-  ab:0,
-  hits:0,
-  hr:0
-}));
+let data = JSON.parse(localStorage.getItem("players")) || 
+Array(16).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
 
 function render(){
   let container = document.getElementById("players");
-  container.innerHTML = "";
+  container.innerHTML="";
 
+  // ordenar por AVG
   data.sort((a,b)=>{
     let avgA = a.ab ? a.hits/a.ab : 0;
     let avgB = b.ab ? b.hits/b.ab : 0;
     return avgB - avgA;
   });
 
+  // líderes
   let liderAVG = data[0]?.name || "---";
-
-  let liderHR = "---";
-  let maxHR = 0;
-
-  data.forEach(p=>{
-    if(p.hr > maxHR){
-      maxHR = p.hr;
-      liderHR = p.name;
-    }
-  });
+  let liderHR = data.reduce((a,b)=> b.hr>a.hr?b:a).name || "---";
 
   document.getElementById("liderAVG").innerText = liderAVG;
   document.getElementById("liderHR").innerText = liderHR;
@@ -111,32 +107,31 @@ function render(){
   data.forEach((p,i)=>{
     let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
 
-    let div = document.createElement("div");
-    div.className = "player";
-
-    div.innerHTML = `
-      <input value="${p.name}" onchange="cambiarNombre(${i},this.value)">
-      <div>#${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}</div>
+    container.innerHTML += `
+    <div class="card">
+      <input value="${p.name}" placeholder="Jugador" onchange="setNombre(${i},this.value)">
+      <div class="stats">
+        #${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}
+      </div>
 
       <div class="botones">
-        <button class="out" onclick="add(${i},'out')">OUT</button>
-        <button class="hit" onclick="add(${i},'hit')">HIT</button>
-        <button class="hr" onclick="add(${i},'hr')">HR</button>
+        <button class="out" onclick="accion(${i},'out')">OUT</button>
+        <button class="hit" onclick="accion(${i},'hit')">HIT</button>
+        <button class="hr" onclick="accion(${i},'hr')">HR</button>
       </div>
+    </div>
     `;
-
-    container.appendChild(div);
   });
 
   guardar();
 }
 
-function cambiarNombre(i,nombre){
-  data[i].name = nombre;
+function setNombre(i,val){
+  data[i].name = val;
   guardar();
 }
 
-function add(i,tipo){
+function accion(i,tipo){
   data[i].ab++;
 
   if(tipo==="hit") data[i].hits++;
@@ -149,14 +144,51 @@ function add(i,tipo){
 }
 
 function guardar(){
-  localStorage.setItem("players", JSON.stringify(data));
+  localStorage.setItem("players",JSON.stringify(data));
 }
 
 function resetear(){
   if(confirm("¿Nueva temporada?")){
-    localStorage.removeItem("players");
+    localStorage.clear();
     location.reload();
   }
+}
+
+function guardarDia(){
+  let historial = JSON.parse(localStorage.getItem("historial")) || [];
+
+  historial.push({
+    fecha: new Date().toLocaleString(),
+    data: JSON.parse(JSON.stringify(data))
+  });
+
+  localStorage.setItem("historial",JSON.stringify(historial));
+
+  alert("Día guardado 🔥");
+}
+
+function verHistorial(){
+  let historial = JSON.parse(localStorage.getItem("historial")) || [];
+
+  if(historial.length===0){
+    alert("No hay historial");
+    return;
+  }
+
+  let texto="";
+
+  historial.forEach(dia=>{
+    texto += "📅 "+dia.fecha+"\n";
+
+    dia.data.forEach(p=>{
+      let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+      texto += `${p.name||"Jugador"} | H:${p.hits} HR:${p.hr} AVG:${avg}\n`;
+    });
+
+    texto+="\n----------------\n";
+  });
+
+  alert(texto);
 }
 
 render();
