@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estadísticas Softball</title>
+<title>Estadísticas</title>
 
 <style>
 body{
@@ -13,11 +13,9 @@ body{
     padding:10px;
 }
 
-h1{
-    text-align:center;
-}
+h1{text-align:center;}
 
-select, button{
+input, button{
     width:100%;
     padding:12px;
     margin:5px 0;
@@ -37,6 +35,10 @@ select, button{
     margin-bottom:8px;
 }
 
+.top{
+    font-weight:bold;
+    color:gold;
+}
 </style>
 </head>
 
@@ -45,7 +47,7 @@ select, button{
 <h1>⚾ Estadísticas</h1>
 <h3 id="lider">💣 HR líder: ---</h3>
 
-<select id="jugador"></select>
+<input id="nombre" placeholder="Nombre del jugador">
 
 <button class="hit" onclick="play('hit')">Hit</button>
 <button class="out" onclick="play('out')">Out</button>
@@ -57,39 +59,26 @@ select, button{
 
 <script>
 
-let nombres = [
-"Jugador 1","Jugador 2","Jugador 3","Jugador 4",
-"Jugador 5","Jugador 6","Jugador 7","Jugador 8",
-"Jugador 9","Jugador 10","Jugador 11","Jugador 12",
-"Jugador 13","Jugador 14","Jugador 15","Jugador 16"
-];
-
 let data = JSON.parse(localStorage.getItem("stats")) || {};
 
-nombres.forEach(n=>{
-    if(!data[n]){
-        data[n]={hits:0, turnos:0, hr:0};
-    }
-});
-
-let select = document.getElementById("jugador");
-
-nombres.forEach(n=>{
-    let opt = document.createElement("option");
-    opt.value = n;
-    opt.textContent = n;
-    select.appendChild(opt);
-});
-
 function play(tipo){
-    let j = select.value;
+    let nombre = document.getElementById("nombre").value.trim();
 
-    data[j].turnos++;
+    if(!nombre){
+        alert("Escribe un nombre");
+        return;
+    }
 
-    if(tipo==="hit") data[j].hits++;
+    if(!data[nombre]){
+        data[nombre]={hits:0, turnos:0, hr:0};
+    }
+
+    data[nombre].turnos++;
+
+    if(tipo==="hit") data[nombre].hits++;
     if(tipo==="hr"){
-        data[j].hits++;
-        data[j].hr++;
+        data[nombre].hits++;
+        data[nombre].hr++;
     }
 
     save();
@@ -113,7 +102,7 @@ function render(){
         let s = p[1];
 
         html += `
-        <div class="card">
+        <div class="card ${i==0?'top':''}">
         #${i+1} ${nombre}<br>
         AVG: ${avg(s)} | H: ${s.hits} | AB: ${s.turnos} | HR: ${s.hr}
         </div>
@@ -123,9 +112,11 @@ function render(){
     document.getElementById("tabla").innerHTML = html;
 
     // HR líder
-    let hrLeader = arr.sort((a,b)=> b[1].hr - a[1].hr)[0];
-    document.getElementById("lider").innerText =
+    if(arr.length){
+        let hrLeader = [...arr].sort((a,b)=> b[1].hr - a[1].hr)[0];
+        document.getElementById("lider").innerText =
         "💣 HR líder: " + hrLeader[0] + " ("+hrLeader[1].hr+")";
+    }
 }
 
 function save(){
