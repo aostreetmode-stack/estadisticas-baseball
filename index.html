@@ -3,28 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estadísticas</title>
+<title>Softball Stats Pro</title>
 
 <style>
 body{
-  background:#0f172a;
-  color:white;
+  margin:0;
   font-family:Arial;
-  padding:10px;
+  color:white;
+  background:
+    linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)),
+    url("https://images.unsplash.com/photo-1505843513577-22bb7d21e455");
+  background-size:cover;
+  background-attachment:fixed;
+}
+
+/* HEADER */
+.header{
+  text-align:center;
+  padding:15px;
+  font-size:22px;
+  font-weight:bold;
 }
 
 .top{
   display:flex;
   justify-content:space-between;
+  padding:10px;
   font-weight:bold;
-  margin-bottom:10px;
 }
 
+/* CARDS */
 .card{
-  background:#1e293b;
+  background:rgba(30,41,59,0.95);
+  margin:10px;
   padding:10px;
   border-radius:12px;
-  margin-bottom:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.5);
 }
 
 input{
@@ -33,6 +47,7 @@ input{
   border:none;
   border-radius:8px;
   margin-bottom:5px;
+  font-size:16px;
 }
 
 .stats{
@@ -40,6 +55,7 @@ input{
   margin-bottom:5px;
 }
 
+/* BOTONES */
 .botones{
   display:flex;
   gap:5px;
@@ -50,25 +66,28 @@ button{
   padding:10px;
   border:none;
   border-radius:8px;
-  color:white;
   font-weight:bold;
 }
 
-.out{background:red;}
-.hit{background:gray;}
-.hr{background:green;}
+/* COLORES */
+.out{background:#dc2626;color:white;}
+.hit{background:#9ca3af;color:black;}
+.hr{background:#16a34a;color:white;}
 
-.reset{
-  width:100%;
-  margin-top:10px;
-  background:#ccc;
-  color:black;
+.guardar{background:#2563eb;color:white;}
+.historial{background:#7c3aed;color:white;}
+.reset{background:#facc15;color:black;margin:10px;width:calc(100% - 20px);}
+
+/* EFECTO LÍDER */
+.lider{
+  border:2px solid gold;
 }
-
 </style>
 </head>
 
 <body>
+
+<div class="header">⚾ Estadísticas Softball</div>
 
 <div class="top">
   <div>🏆 AVG líder: <span id="liderAVG">---</span></div>
@@ -77,9 +96,11 @@ button{
 
 <div id="players"></div>
 
-<button onclick="guardarDia()">Guardar día</button>
-<button onclick="verHistorial()">Historial</button>
-<button class="reset" onclick="resetear()">Nueva temporada</button>
+<div style="padding:10px;">
+  <button class="guardar" onclick="guardarDia()">Guardar día</button>
+  <button class="historial" onclick="verHistorial()">Historial</button>
+  <button class="reset" onclick="resetear()">Nueva temporada</button>
+</div>
 
 <script>
 
@@ -90,14 +111,13 @@ function render(){
   let container = document.getElementById("players");
   container.innerHTML="";
 
-  // ordenar por AVG
+  // ordenar ranking
   data.sort((a,b)=>{
     let avgA = a.ab ? a.hits/a.ab : 0;
     let avgB = b.ab ? b.hits/b.ab : 0;
     return avgB - avgA;
   });
 
-  // líderes
   let liderAVG = data[0]?.name || "---";
   let liderHR = data.reduce((a,b)=> b.hr>a.hr?b:a).name || "---";
 
@@ -108,8 +128,9 @@ function render(){
     let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
 
     container.innerHTML += `
-    <div class="card">
+    <div class="card ${i===0 ? 'lider' : ''}">
       <input value="${p.name}" placeholder="Jugador" onchange="setNombre(${i},this.value)">
+
       <div class="stats">
         #${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}
       </div>
@@ -148,7 +169,7 @@ function guardar(){
 }
 
 function resetear(){
-  if(confirm("¿Nueva temporada?")){
+  if(confirm("¿Seguro nueva temporada?")){
     localStorage.clear();
     location.reload();
   }
@@ -158,12 +179,11 @@ function guardarDia(){
   let historial = JSON.parse(localStorage.getItem("historial")) || [];
 
   historial.push({
-    fecha: new Date().toLocaleString(),
-    data: JSON.parse(JSON.stringify(data))
+    fecha:new Date().toLocaleString(),
+    data:JSON.parse(JSON.stringify(data))
   });
 
   localStorage.setItem("historial",JSON.stringify(historial));
-
   alert("Día guardado 🔥");
 }
 
