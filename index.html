@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Estadísticas Baseball</title>
 
 <style>
@@ -13,163 +14,153 @@ body{
   padding:10px;
 }
 
-h1{
-  text-align:center;
-}
-
-input{
-  width:100%;
-  padding:12px;
-  margin:5px 0;
-  border:none;
-  border-radius:10px;
-  font-size:16px;
-}
-
-.botones{
+.top{
   display:flex;
-  gap:5px;
-  margin-bottom:10px;
-}
-
-button{
-  flex:1;
-  padding:12px;
-  border:none;
-  border-radius:10px;
+  justify-content:space-between;
   font-weight:bold;
-  font-size:16px;
-}
-
-.hit{background:green;}
-.out{background:red;}
-.hr{background:orange;}
-
-.reset{background:#ccc;color:black;margin-top:10px;}
-
-.tabla{
-  margin-top:15px;
+  margin-bottom:10px;
 }
 
 .player{
   background:#1e293b;
   padding:10px;
   border-radius:10px;
-  margin-bottom:8px;
-  display:flex;
-  justify-content:space-between;
+  margin-bottom:10px;
 }
 
-.top1{background:#FFD700;color:black;}
-.top2{background:#C0C0C0;color:black;}
-.top3{background:#cd7f32;color:black;}
+input{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  margin-bottom:5px;
+}
+
+.botones{
+  display:flex;
+  gap:5px;
+}
+
+button{
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+.out{background:red;}
+.hit{background:#ccc;}
+.hr{background:green;}
+
+.reset{
+  margin-top:10px;
+  background:#ccc;
+  color:black;
+  width:100%;
+}
 </style>
 </head>
 
 <body>
 
-<h1>⚾ Estadísticas</h1>
-<h3 id="lider">💣 HR líder: ---</h3>
-
-<input id="nombre" placeholder="Nombre del jugador">
-
-<div class="botones">
-  <button class="hit" onclick="registrar('hit')">Hit</button>
-  <button class="out" onclick="registrar('out')">Out</button>
-  <button class="hr" onclick="registrar('hr')">HR</button>
+<div class="top">
+  <div>🏆 AVG líder: <span id="liderAVG">---</span></div>
+  <div>💣 HR líder: <span id="liderHR">---</span></div>
 </div>
+
+<div id="players"></div>
 
 <button class="reset" onclick="resetear()">Nueva temporada</button>
 
-<div class="tabla" id="tabla"></div>
-
 <script>
-let jugadores = JSON.parse(localStorage.getItem("jugadores")) || {};
 
-function registrar(tipo){
-  let nombre = document.getElementById("nombre").value.trim();
-  if(nombre === "") return;
+let data = JSON.parse(localStorage.getItem("players")) ||
+Array(16).fill().map(()=>({
+  name:"Jugador",
+  ab:0,
+  hits:0,
+  hr:0
+}));
 
-  if(!jugadores[nombre]){
-    jugadores[nombre] = {hits:0, outs:0, hr:0};
-  }
+function render(){
+  let container = document.getElementById("players");
+  container.innerHTML = "";
 
-  if(tipo==="hit") jugadores[nombre].hits++;
-  if(tipo==="out") jugadores[nombre].outs++;
-  if(tipo==="hr"){
-    jugadores[nombre].hits++;
-    jugadores[nombre].hr++;
-  }
-
-  guardar();
-  mostrar();
-}
-
-function guardar(){
-  localStorage.setItem("jugadores", JSON.stringify(jugadores));
-}
-
-function mostrar(){
-  let tabla = document.getElementById("tabla");
-  tabla.innerHTML = "";
-
-  let lista = Object.entries(jugadores);
-
-  lista.sort((a,b)=>{
-    let avgA = calcularAVG(a[1]);
-    let avgB = calcularAVG(b[1]);
+  data.sort((a,b)=>{
+    let avgA = a.ab ? a.hits/a.ab : 0;
+    let avgB = b.ab ? b.hits/b.ab : 0;
     return avgB - avgA;
   });
+
+  let liderAVG = data[0]?.name || "---";
 
   let liderHR = "---";
   let maxHR = 0;
 
-  lista.forEach(([nombre,stats],index)=>{
-    let avg = calcularAVG(stats).toFixed(3);
-
-    if(stats.hr > maxHR){
-      maxHR = stats.hr;
-      liderHR = nombre;
+  data.forEach(p=>{
+    if(p.hr > maxHR){
+      maxHR = p.hr;
+      liderHR = p.name;
     }
+  });
+
+  document.getElementById("liderAVG").innerText = liderAVG;
+  document.getElementById("liderHR").innerText = liderHR;
+
+  data.forEach((p,i)=>{
+    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
 
     let div = document.createElement("div");
     div.className = "player";
 
-    if(index===0) div.classList.add("top1");
-    if(index===1) div.classList.add("top2");
-    if(index===2) div.classList.add("top3");
-
     div.innerHTML = `
-      <div>
-        <strong>#${index+1} ${nombre}</strong><br>
-        AVG: ${avg}
-      </div>
-      <div>
-        H:${stats.hits} | HR:${stats.hr}
+      <input value="${p.name}" onchange="cambiarNombre(${i},this.value)">
+      <div>#${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}</div>
+
+      <div class="botones">
+        <button class="out" onclick="add(${i},'out')">OUT</button>
+        <button class="hit" onclick="add(${i},'hit')">HIT</button>
+        <button class="hr" onclick="add(${i},'hr')">HR</button>
       </div>
     `;
 
-    tabla.appendChild(div);
+    container.appendChild(div);
   });
 
-  document.getElementById("lider").innerText = "💣 HR líder: " + liderHR;
+  guardar();
 }
 
-function calcularAVG(stats){
-  let turnos = stats.hits + stats.outs;
-  if(turnos===0) return 0;
-  return stats.hits / turnos;
+function cambiarNombre(i,nombre){
+  data[i].name = nombre;
+  guardar();
+}
+
+function add(i,tipo){
+  data[i].ab++;
+
+  if(tipo==="hit") data[i].hits++;
+  if(tipo==="hr"){
+    data[i].hits++;
+    data[i].hr++;
+  }
+
+  render();
+}
+
+function guardar(){
+  localStorage.setItem("players", JSON.stringify(data));
 }
 
 function resetear(){
-  if(confirm("¿Seguro quieres borrar la temporada?")){
-    jugadores = {};
-    guardar();
-    mostrar();
+  if(confirm("¿Nueva temporada?")){
+    localStorage.removeItem("players");
+    location.reload();
   }
 }
 
-mostrar();
+render();
+
 </script>
 
 </body>
