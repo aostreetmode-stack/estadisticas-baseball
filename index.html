@@ -12,10 +12,11 @@
 body{
   margin:0;
   font-family:Arial;
-  background:#1f2937;
+  background:#374151;
   color:white;
 }
 
+/* LOGIN */
 .container{
   padding:20px;
 }
@@ -29,24 +30,78 @@ input{
 }
 
 button{
-  width:100%;
   padding:10px;
-  margin-top:5px;
   border:none;
   border-radius:8px;
   font-weight:bold;
 }
 
-.login{background:#2563eb;color:white;}
-.register{background:#16a34a;color:white;}
-.logout{background:#dc2626;color:white;}
+.login{background:#2563eb;color:white;width:100%;}
+.register{background:#16a34a;color:white;width:100%;}
+.logout{background:#dc2626;color:white;width:100%;}
+
+/* APP */
+.header{
+  text-align:center;
+  padding:15px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+.top{
+  display:flex;
+  justify-content:space-between;
+  padding:10px;
+  font-weight:bold;
+}
+
+.card{
+  background:#4b5563;
+  margin:10px;
+  padding:10px;
+  border-radius:12px;
+}
+
+.name-row{
+  display:flex;
+  gap:5px;
+}
+
+.name{
+  flex:1;
+  font-size:18px;
+  font-weight:bold;
+  color:white;
+}
+
+.delete{
+  background:#ef4444;
+  color:black;
+  font-weight:bold;
+}
+
+.stats{
+  font-size:13px;
+  margin:5px 0;
+}
+
+.botones{
+  display:flex;
+  gap:5px;
+}
+
+.out{background:#dc2626;color:white;flex:1;}
+.hit{background:#9ca3af;color:black;flex:1;}
+.hr{background:#16a34a;color:white;flex:1;}
 
 .hidden{display:none;}
+
 </style>
 </head>
 
 <body>
 
+<!-- LOGIN -->
 <div class="container" id="loginBox">
   <h2>Login</h2>
   <input id="email" placeholder="Email">
@@ -55,12 +110,28 @@ button{
   <button class="register" onclick="register()">Crear cuenta</button>
 </div>
 
-<div class="container hidden" id="appBox">
-  <h2>Bienvenido ⚾</h2>
-  <p id="userEmail"></p>
-  <button class="logout" onclick="logout()">Cerrar sesión</button>
+<!-- APP -->
+<div id="appBox" class="hidden">
+
+<div class="header">⚾ Estadísticas Softball</div>
+
+<div class="top">
+  <div>🏆 AVG líder: <span id="liderAVG">---</span></div>
+  <div>💣 HR líder: <span id="liderHR">---</span></div>
 </div>
 
+<div id="players"></div>
+
+<div style="padding:10px;">
+  <button onclick="guardarDia()">Guardar día</button>
+  <button onclick="verRanking()">Ranking</button>
+  <button onclick="exportar()">Exportar</button>
+  <button onclick="logout()" class="logout">Cerrar sesión</button>
+</div>
+
+</div>
+
+<!-- FIREBASE -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
@@ -79,41 +150,123 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 window.login = function(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  let email = document.getElementById("email").value;
+  let password = document.getElementById("password").value;
 
-  signInWithEmailAndPassword(auth, email, password)
-  .then(()=>{
-    alert("Bienvenido 🔥");
-  })
-  .catch(err=>alert(err.message));
+  signInWithEmailAndPassword(auth,email,password)
+  .catch(e=>alert(e.message));
 }
 
 window.register = function(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  let email = document.getElementById("email").value;
+  let password = document.getElementById("password").value;
 
-  createUserWithEmailAndPassword(auth, email, password)
-  .then(()=>{
-    alert("Cuenta creada ✅");
-  })
-  .catch(err=>alert(err.message));
+  createUserWithEmailAndPassword(auth,email,password)
+  .catch(e=>alert(e.message));
 }
 
 window.logout = function(){
   signOut(auth);
 }
 
-onAuthStateChanged(auth, user=>{
+onAuthStateChanged(auth,user=>{
   if(user){
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("appBox").classList.remove("hidden");
-    document.getElementById("userEmail").innerText = user.email;
   }else{
     document.getElementById("loginBox").classList.remove("hidden");
     document.getElementById("appBox").classList.add("hidden");
   }
 });
+
+/* APP LOGIC */
+
+let data = JSON.parse(localStorage.getItem("players")) || 
+Array(12).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
+
+function render(){
+  let container = document.getElementById("players");
+  container.innerHTML="";
+
+  data.sort((a,b)=>{
+    let avgA = a.ab ? a.hits/a.ab : 0;
+    let avgB = b.ab ? b.hits/b.ab : 0;
+    return avgB - avgA;
+  });
+
+  let liderAVG = data[0]?.name || "---";
+  let liderHR = data.some(p=>p.hr>0) ? data.reduce((a,b)=> b.hr>a.hr?b:a).name : "---";
+
+  document.getElementById("liderAVG").innerText = liderAVG;
+  document.getElementById("liderHR").innerText = liderHR;
+
+  data.forEach((p,i)=>{
+    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+
+    container.innerHTML += `
+    <div class="card">
+      <div class="name-row">
+        <input class="name" value="${p.name}" ${p.name ? "disabled":""} 
+        onchange="setNombre(${i},this.value)">
+        <button class="delete" onclick="borrar(${i})">X</button>
+      </div>
+
+      <div class="stats">
+        #${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}
+      </div>
+
+      <div class="botones">
+        <button class="out" onclick="accion(${i},'out')">OUT</button>
+        <button class="hit" onclick="accion(${i},'hit')">HIT</button>
+        <button class="hr" onclick="accion(${i},'hr')">HR</button>
+      </div>
+    </div>`;
+  });
+
+  guardar();
+}
+
+window.setNombre = function(i,val){
+  if(!data[i].name) data[i].name = val;
+  render();
+}
+
+window.borrar = function(i){
+  if(confirm("Borrar jugador?")){
+    data[i]={name:"",ab:0,hits:0,hr:0};
+    render();
+  }
+}
+
+window.accion = function(i,tipo){
+  data[i].ab++;
+  if(tipo==="hit") data[i].hits++;
+  if(tipo==="hr"){data[i].hits++;data[i].hr++;}
+  render();
+}
+
+function guardar(){
+  localStorage.setItem("players",JSON.stringify(data));
+}
+
+window.guardarDia = function(){
+  alert("Guardado 🔥");
+}
+
+window.verRanking = function(){
+  let texto="RANKING\n\n";
+  data.forEach(p=>{
+    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+    texto += `${p.name||"-"} AVG:${avg}\n`;
+  });
+  alert(texto);
+}
+
+window.exportar = function(){
+  alert("Luego lo mejoramos 📸");
+}
+
+render();
 
 </script>
 
