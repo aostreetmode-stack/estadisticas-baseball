@@ -16,86 +16,31 @@ body{
   color:white;
 }
 
-/* LOGIN */
-.container{
-  padding:20px;
-}
-
-input{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border:none;
-  border-radius:8px;
-}
-
-button{
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
-}
+.container{padding:20px;}
+input{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px;}
+button{padding:10px;border:none;border-radius:8px;font-weight:bold;}
 
 .login{background:#2563eb;color:white;width:100%;}
 .register{background:#16a34a;color:white;width:100%;}
 .logout{background:#dc2626;color:white;width:100%;}
 
-/* APP */
-.header{
-  text-align:center;
-  padding:15px;
-  font-size:22px;
-  font-weight:bold;
-}
+.header{text-align:center;padding:15px;font-size:22px;font-weight:bold;}
+.top{display:flex;justify-content:space-between;padding:10px;font-weight:bold;}
 
-.top{
-  display:flex;
-  justify-content:space-between;
-  padding:10px;
-  font-weight:bold;
-}
+.card{background:#4b5563;margin:10px;padding:10px;border-radius:12px;}
 
-.card{
-  background:#4b5563;
-  margin:10px;
-  padding:10px;
-  border-radius:12px;
-}
+.name-row{display:flex;gap:5px;}
+.name{flex:1;font-size:18px;font-weight:bold;color:white;}
+.delete{background:#ef4444;color:black;font-weight:bold;}
 
-.name-row{
-  display:flex;
-  gap:5px;
-}
-
-.name{
-  flex:1;
-  font-size:18px;
-  font-weight:bold;
-  color:white;
-}
-
-.delete{
-  background:#ef4444;
-  color:black;
-  font-weight:bold;
-}
-
-.stats{
-  font-size:13px;
-  margin:5px 0;
-}
-
-.botones{
-  display:flex;
-  gap:5px;
-}
+.stats{font-size:13px;margin:5px 0;}
+.botones{display:flex;gap:5px;}
 
 .out{background:#dc2626;color:white;flex:1;}
 .hit{background:#9ca3af;color:black;flex:1;}
 .hr{background:#16a34a;color:white;flex:1;}
 
 .hidden{display:none;}
-
 </style>
 </head>
 
@@ -124,14 +69,15 @@ button{
 
 <div style="padding:10px;">
   <button onclick="guardarDia()">Guardar día</button>
+  <button onclick="verHistorial()">Historial</button>
   <button onclick="verRanking()">Ranking</button>
+  <button onclick="resetear()">Nueva temporada</button>
   <button onclick="exportar()">Exportar</button>
   <button onclick="logout()" class="logout">Cerrar sesión</button>
 </div>
 
 </div>
 
-<!-- FIREBASE -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
@@ -152,37 +98,31 @@ const auth = getAuth(app);
 window.login = function(){
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
-
-  signInWithEmailAndPassword(auth,email,password)
-  .catch(e=>alert(e.message));
+  signInWithEmailAndPassword(auth,email,password).catch(e=>alert(e.message));
 }
 
 window.register = function(){
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
-
-  createUserWithEmailAndPassword(auth,email,password)
-  .catch(e=>alert(e.message));
+  createUserWithEmailAndPassword(auth,email,password).catch(e=>alert(e.message));
 }
 
-window.logout = function(){
-  signOut(auth);
-}
+window.logout = function(){ signOut(auth); }
 
 onAuthStateChanged(auth,user=>{
   if(user){
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("appBox").classList.remove("hidden");
+    loginBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
   }else{
-    document.getElementById("loginBox").classList.remove("hidden");
-    document.getElementById("appBox").classList.add("hidden");
+    loginBox.classList.remove("hidden");
+    appBox.classList.add("hidden");
   }
 });
 
-/* APP LOGIC */
+/* APP */
 
 let data = JSON.parse(localStorage.getItem("players")) || 
-Array(12).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
+Array(16).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
 
 function render(){
   let container = document.getElementById("players");
@@ -197,7 +137,7 @@ function render(){
   let liderAVG = data[0]?.name || "---";
   let liderHR = data.some(p=>p.hr>0) ? data.reduce((a,b)=> b.hr>a.hr?b:a).name : "---";
 
-  document.getElementById("liderAVG").innerText = liderAVG;
+  liderAVG && (document.getElementById("liderAVG").innerText = liderAVG);
   document.getElementById("liderHR").innerText = liderHR;
 
   data.forEach((p,i)=>{
@@ -206,8 +146,7 @@ function render(){
     container.innerHTML += `
     <div class="card">
       <div class="name-row">
-        <input class="name" value="${p.name}" ${p.name ? "disabled":""} 
-        onchange="setNombre(${i},this.value)">
+        <input class="name" value="${p.name}" ${p.name ? "disabled":""} onchange="setNombre(${i},this.value)">
         <button class="delete" onclick="borrar(${i})">X</button>
       </div>
 
@@ -249,8 +188,34 @@ function guardar(){
   localStorage.setItem("players",JSON.stringify(data));
 }
 
+window.resetear = function(){
+  if(confirm("Nueva temporada?")){
+    localStorage.clear();
+    location.reload();
+  }
+}
+
 window.guardarDia = function(){
-  alert("Guardado 🔥");
+  let historial = JSON.parse(localStorage.getItem("historial")) || [];
+  historial.push({fecha:new Date().toLocaleString(),data:[...data]});
+  localStorage.setItem("historial",JSON.stringify(historial));
+  alert("Día guardado 🔥");
+}
+
+window.verHistorial = function(){
+  let historial = JSON.parse(localStorage.getItem("historial")) || [];
+  if(historial.length===0){alert("No hay historial");return;}
+
+  let texto="";
+  historial.forEach(dia=>{
+    texto+="📅 "+dia.fecha+"\n";
+    dia.data.forEach(p=>{
+      let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+      texto+=`${p.name||"-"} AVG:${avg}\n`;
+    });
+    texto+="\n----\n";
+  });
+  alert(texto);
 }
 
 window.verRanking = function(){
@@ -263,7 +228,7 @@ window.verRanking = function(){
 }
 
 window.exportar = function(){
-  alert("Luego lo mejoramos 📸");
+  alert("Exportar pronto 📸");
 }
 
 render();
