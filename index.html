@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
+<!-- LIBRERÍA PARA EXPORTAR IMAGEN -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
 <style>
 body{
   margin:0;
   font-family:Arial;
   color:white;
-  background:
-    linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)),
-    url("https://images.unsplash.com/photo-1505843513577-22bb7d21e455");
-  background-size:cover;
-  background-attachment:fixed;
+  background:#1f2937;
 }
 
+/* HEADER */
 .header{
   text-align:center;
   padding:15px;
@@ -31,20 +31,25 @@ body{
   font-weight:bold;
 }
 
+/* CARDS */
 .card{
-  background:rgba(30,41,59,0.95);
+  background:#374151;
   margin:10px;
   padding:10px;
   border-radius:12px;
 }
 
-input{
+/* NOMBRE */
+.nombreInput{
   width:100%;
-  padding:10px;
+  padding:12px;
   border:none;
   border-radius:8px;
   margin-bottom:5px;
-  font-size:16px;
+  font-size:18px;
+  font-weight:bold;
+  color:white;
+  background:#6b7280;
 }
 
 .stats{
@@ -52,6 +57,7 @@ input{
   margin-bottom:5px;
 }
 
+/* BOTONES */
 .botones{
   display:flex;
   gap:5px;
@@ -72,9 +78,19 @@ button{
 .guardar{background:#2563eb;color:white;}
 .historial{background:#7c3aed;color:white;}
 .ranking{background:#0ea5e9;color:white;}
-.reset{background:#facc15;color:black;margin:10px;width:calc(100% - 20px);}
-.borrar{background:#ef4444;color:white;margin-top:5px;}
+.exportar{background:#22c55e;color:white;}
 
+.reset{background:#facc15;color:black;margin:10px;width:calc(100% - 20px);}
+
+.borrar{
+  background:#ef4444;
+  color:black;
+  font-size:20px;
+  font-weight:bold;
+  width:50px;
+}
+
+/* LÍDER */
 .lider{
   border:2px solid gold;
 }
@@ -88,6 +104,8 @@ button{
 
 <body>
 
+<div id="app">
+
 <div class="header">⚾ Estadísticas Softball</div>
 
 <div class="top">
@@ -97,10 +115,13 @@ button{
 
 <div id="players"></div>
 
+</div>
+
 <div style="padding:10px;">
   <button class="guardar" onclick="guardarDia()">Guardar día</button>
   <button class="historial" onclick="verHistorial()">Historial</button>
   <button class="ranking" onclick="verRanking()">Ranking</button>
+  <button class="exportar" onclick="exportarImagen()">📸 Exportar</button>
   <button class="reset" onclick="resetear()">Nueva temporada</button>
 </div>
 
@@ -137,13 +158,14 @@ function render(){
 
       <div class="nombreRow">
         <input 
+          class="nombreInput"
           value="${p.name}" 
           placeholder="Jugador"
           ${p.name ? "disabled" : ""}
           onchange="setNombre(${i},this.value)"
         >
 
-        ${p.name ? `<button class="borrar" onclick="borrarJugador(${i})">❌</button>` : ""}
+        ${p.name ? `<button class="borrar" onclick="borrarJugador(${i})">✖</button>` : ""}
       </div>
 
       <div class="stats">
@@ -164,14 +186,13 @@ function render(){
 
 function setNombre(i,val){
   if(!val.trim()) return;
-
   data[i].name = val;
   guardar();
   render();
 }
 
 function borrarJugador(i){
-  if(confirm("¿Borrar este jugador?")){
+  if(confirm("¿Borrar jugador?")){
     data[i] = {name:"",ab:0,hits:0,hr:0};
     guardar();
     render();
@@ -249,6 +270,16 @@ function verRanking(){
   });
 
   alert(texto);
+}
+
+/* EXPORTAR IMAGEN */
+function exportarImagen(){
+  html2canvas(document.getElementById("app")).then(canvas => {
+    let link = document.createElement("a");
+    link.download = "softball_stats.png";
+    link.href = canvas.toDataURL();
+    link.click();
+  });
 }
 
 render();
