@@ -17,7 +17,6 @@ body{
   background-attachment:fixed;
 }
 
-/* HEADER */
 .header{
   text-align:center;
   padding:15px;
@@ -32,7 +31,6 @@ body{
   font-weight:bold;
 }
 
-/* CARDS */
 .card{
   background:rgba(30,41,59,0.95);
   margin:10px;
@@ -55,7 +53,6 @@ input{
   margin-bottom:5px;
 }
 
-/* BOTONES */
 .botones{
   display:flex;
   gap:5px;
@@ -69,16 +66,15 @@ button{
   font-weight:bold;
 }
 
-/* COLORES */
 .out{background:#dc2626;color:white;}
 .hit{background:#9ca3af;color:black;}
 .hr{background:#16a34a;color:white;}
 
 .guardar{background:#2563eb;color:white;}
 .historial{background:#7c3aed;color:white;}
+.ranking{background:#0ea5e9;color:white;}
 .reset{background:#facc15;color:black;margin:10px;width:calc(100% - 20px);}
 
-/* EFECTO LÍDER */
 .lider{
   border:2px solid gold;
 }
@@ -99,6 +95,7 @@ button{
 <div style="padding:10px;">
   <button class="guardar" onclick="guardarDia()">Guardar día</button>
   <button class="historial" onclick="verHistorial()">Historial</button>
+  <button class="ranking" onclick="verRanking()">Ranking</button>
   <button class="reset" onclick="resetear()">Nueva temporada</button>
 </div>
 
@@ -107,28 +104,32 @@ button{
 let data = JSON.parse(localStorage.getItem("players")) || 
 Array(16).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
 
+function getAVG(p){
+  return p.ab ? (p.hits/p.ab) : 0;
+}
+
 function render(){
   let container = document.getElementById("players");
   container.innerHTML="";
 
-  // ordenar ranking
-  data.sort((a,b)=>{
-    let avgA = a.ab ? a.hits/a.ab : 0;
-    let avgB = b.ab ? b.hits/b.ab : 0;
-    return avgB - avgA;
-  });
+  let ranking = [...data].sort((a,b)=> getAVG(b)-getAVG(a));
 
-  let liderAVG = data[0]?.name || "---";
-  let liderHR = data.reduce((a,b)=> b.hr>a.hr?b:a).name || "---";
+  let lider = ranking[0];
+  let liderAVG = lider?.name ? `${lider.name} (${getAVG(lider).toFixed(3)})` : "---";
+
+  // FIX HR líder
+  let liderHRplayer = data.reduce((a,b)=> b.hr>a.hr?b:a,{hr:0});
+  let liderHR = liderHRplayer.hr > 0 ? liderHRplayer.name : "---";
 
   document.getElementById("liderAVG").innerText = liderAVG;
   document.getElementById("liderHR").innerText = liderHR;
 
   data.forEach((p,i)=>{
-    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+    let avg = getAVG(p).toFixed(3);
+    let esLider = p === lider;
 
     container.innerHTML += `
-    <div class="card ${i===0 ? 'lider' : ''}">
+    <div class="card ${esLider ? 'lider' : ''}">
       <input value="${p.name}" placeholder="Jugador" onchange="setNombre(${i},this.value)">
 
       <div class="stats">
@@ -148,6 +149,11 @@ function render(){
 }
 
 function setNombre(i,val){
+  if(data[i].name && val===""){
+    alert("No puedes borrar el nombre, solo nueva temporada");
+    render();
+    return;
+  }
   data[i].name = val;
   guardar();
 }
@@ -206,6 +212,21 @@ function verHistorial(){
     });
 
     texto+="\n----------------\n";
+  });
+
+  alert(texto);
+}
+
+// NUEVO RANKING SOLO
+function verRanking(){
+  let ranking = [...data].sort((a,b)=> getAVG(b)-getAVG(a));
+
+  let texto="🏆 RANKING POR AVG\n\n";
+
+  ranking.forEach((p,i)=>{
+    if(!p.name) return;
+    let avg = getAVG(p).toFixed(3);
+    texto += `${i+1}. ${p.name} - ${avg}\n`;
   });
 
   alert(texto);
