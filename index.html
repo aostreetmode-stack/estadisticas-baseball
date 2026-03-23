@@ -36,7 +36,6 @@ body{
   margin:10px;
   padding:10px;
   border-radius:12px;
-  box-shadow:0 0 10px rgba(0,0,0,0.5);
 }
 
 input{
@@ -74,9 +73,15 @@ button{
 .historial{background:#7c3aed;color:white;}
 .ranking{background:#0ea5e9;color:white;}
 .reset{background:#facc15;color:black;margin:10px;width:calc(100% - 20px);}
+.borrar{background:#ef4444;color:white;margin-top:5px;}
 
 .lider{
   border:2px solid gold;
+}
+
+.nombreRow{
+  display:flex;
+  gap:5px;
 }
 </style>
 </head>
@@ -117,7 +122,6 @@ function render(){
   let lider = ranking[0];
   let liderAVG = lider?.name ? `${lider.name} (${getAVG(lider).toFixed(3)})` : "---";
 
-  // FIX HR líder
   let liderHRplayer = data.reduce((a,b)=> b.hr>a.hr?b:a,{hr:0});
   let liderHR = liderHRplayer.hr > 0 ? liderHRplayer.name : "---";
 
@@ -130,7 +134,17 @@ function render(){
 
     container.innerHTML += `
     <div class="card ${esLider ? 'lider' : ''}">
-      <input value="${p.name}" placeholder="Jugador" onchange="setNombre(${i},this.value)">
+
+      <div class="nombreRow">
+        <input 
+          value="${p.name}" 
+          placeholder="Jugador"
+          ${p.name ? "disabled" : ""}
+          onchange="setNombre(${i},this.value)"
+        >
+
+        ${p.name ? `<button class="borrar" onclick="borrarJugador(${i})">❌</button>` : ""}
+      </div>
 
       <div class="stats">
         #${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}
@@ -149,13 +163,19 @@ function render(){
 }
 
 function setNombre(i,val){
-  if(data[i].name && val===""){
-    alert("No puedes borrar el nombre, solo nueva temporada");
-    render();
-    return;
-  }
+  if(!val.trim()) return;
+
   data[i].name = val;
   guardar();
+  render();
+}
+
+function borrarJugador(i){
+  if(confirm("¿Borrar este jugador?")){
+    data[i] = {name:"",ab:0,hits:0,hr:0};
+    guardar();
+    render();
+  }
 }
 
 function accion(i,tipo){
@@ -217,7 +237,6 @@ function verHistorial(){
   alert(texto);
 }
 
-// NUEVO RANKING SOLO
 function verRanking(){
   let ranking = [...data].sort((a,b)=> getAVG(b)-getAVG(a));
 
