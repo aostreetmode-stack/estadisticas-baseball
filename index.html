@@ -5,7 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
-<!-- LIBRERÍA PARA EXPORTAR IMAGEN -->
+<!-- ICONO -->
+<link rel="icon" href="icon.jpg">
+<link rel="apple-touch-icon" href="icon.jpg">
+
+<!-- APP -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f2937">
+
+<!-- EXPORTAR -->
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
@@ -16,7 +24,6 @@ body{
   background:#1f2937;
 }
 
-/* HEADER */
 .header{
   text-align:center;
   padding:15px;
@@ -31,7 +38,6 @@ body{
   font-weight:bold;
 }
 
-/* CARDS */
 .card{
   background:#374151;
   margin:10px;
@@ -39,7 +45,6 @@ body{
   border-radius:12px;
 }
 
-/* NOMBRE */
 .nombreInput{
   width:100%;
   padding:12px;
@@ -57,7 +62,6 @@ body{
   margin-bottom:5px;
 }
 
-/* BOTONES */
 .botones{
   display:flex;
   gap:5px;
@@ -90,7 +94,6 @@ button{
   width:50px;
 }
 
-/* LÍDER */
 .lider{
   border:2px solid gold;
 }
@@ -272,7 +275,6 @@ function verRanking(){
   alert(texto);
 }
 
-/* EXPORTAR IMAGEN */
 function exportarImagen(){
   html2canvas(document.getElementById("app")).then(canvas => {
     let link = document.createElement("a");
