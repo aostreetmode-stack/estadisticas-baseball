@@ -38,7 +38,6 @@ button{
   border:none;
   border-radius:12px;
   font-weight:bold;
-  font-size:15px;
 }
 
 .out{background:#ef4444;}
@@ -95,22 +94,37 @@ th,td{
 
 <script>
 
-let players=[];
-let history=JSON.parse(localStorage.getItem("history"))||[];
+let players = JSON.parse(localStorage.getItem("currentGame")) || [];
+let history = JSON.parse(localStorage.getItem("history")) || [];
 
+// 🔥 RECUPERAR DATOS VIEJOS
+let oldGame = JSON.parse(localStorage.getItem("game"));
+if (oldGame && history.length === 0) {
+  history.push({
+    date: new Date().toLocaleDateString(),
+    data: oldGame
+  });
+  localStorage.setItem("history", JSON.stringify(history));
+}
+
+// 🔧 CREAR JUGADORES SI NO EXISTEN
 function createPlayers(){
   let container=document.getElementById("players");
   container.innerHTML="";
-  
-  for(let i=0;i<9;i++){
-    players[i]={name:"",ab:0,h:0,hr:0};
 
+  if(players.length===0){
+    for(let i=0;i<9;i++){
+      players.push({name:"",ab:0,h:0,hr:0});
+    }
+  }
+
+  players.forEach((p,i)=>{
     let div=document.createElement("div");
     div.className="player";
 
     div.innerHTML=`
-      <input placeholder="Jugador ${i+1}" onchange="players[${i}].name=this.value">
-      <div id="stats${i}">#${i+1} | AB:0 H:0 HR:0 AVG:0.000</div>
+      <input value="${p.name}" placeholder="Jugador ${i+1}" onchange="updateName(${i},this.value)">
+      <div id="stats${i}"></div>
       <div class="row">
         <button class="out" onclick="update(${i},'out')">OUT</button>
         <button class="hit" onclick="update(${i},'hit')">HIT</button>
@@ -118,7 +132,14 @@ function createPlayers(){
       </div>
     `;
     container.appendChild(div);
-  }
+  });
+
+  render();
+}
+
+function updateName(i,value){
+  players[i].name=value;
+  saveCurrent();
 }
 
 function update(i,type){
@@ -126,6 +147,7 @@ function update(i,type){
   if(type==="hit") players[i].h++;
   if(type==="hr"){players[i].h++;players[i].hr++;}
   render();
+  saveCurrent();
 }
 
 function render(){
@@ -136,10 +158,16 @@ function render(){
   });
 }
 
+function saveCurrent(){
+  localStorage.setItem("currentGame", JSON.stringify(players));
+}
+
 function saveDay(){
-  let today=new Date().toLocaleDateString();
-  history.push({date:today,data:[...players]});
-  localStorage.setItem("history",JSON.stringify(history));
+  history.push({
+    date:new Date().toLocaleDateString(),
+    data: JSON.parse(JSON.stringify(players))
+  });
+  localStorage.setItem("history", JSON.stringify(history));
   alert("Día guardado");
 }
 
@@ -150,7 +178,7 @@ function showHistory(){
     output+=`<div class="card"><b>${h.date}</b>`;
     h.data.forEach(p=>{
       let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
-      output+=`<p>${p.name || "Jugador"} - AVG:${avg}</p>`;
+      output+=`<p>${p.name||"Jugador"} - AVG:${avg}</p>`;
     });
     output+="</div>";
   });
@@ -201,8 +229,8 @@ function ranking(){
 }
 
 function newSeason(){
-  if(confirm("Borrar todo el historial?")){
-    localStorage.removeItem("history");
+  if(confirm("Borrar TODO?")){
+    localStorage.clear();
     location.reload();
   }
 }
