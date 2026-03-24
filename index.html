@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
 <style>
@@ -11,8 +10,8 @@ body {
   background:#1f2c3a;
   color:white;
   text-align:center;
-  margin:0;
 }
+
 button {
   padding:10px;
   margin:5px;
@@ -20,28 +19,34 @@ button {
   border-radius:10px;
   font-weight:bold;
 }
+
+.admin-only { background:#2563eb; color:white; }
+.guest { background:#6b7280; color:white; }
+
 .player {
   background:#2f3e52;
   margin:10px;
   padding:10px;
   border-radius:15px;
 }
-input {
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  width:80%;
-  margin:5px;
-}
-.out { background:red; color:white; }
-.hit { background:gray; color:white; }
-.hr { background:green; color:white; }
+
 .card {
   background:#2f3e52;
-  padding:15px;
   margin:10px;
+  padding:10px;
   border-radius:15px;
 }
+
+input {
+  padding:8px;
+  border-radius:10px;
+  border:none;
+  width:60%;
+}
+
+.out { background:red; }
+.hit { background:gray; }
+.hr { background:green; }
 </style>
 </head>
 
@@ -51,9 +56,9 @@ input {
 
 <!-- LOGIN -->
 <div id="login">
-  <input id="email" placeholder="Correo"><br>
-  <input id="password" type="password" placeholder="Contraseña"><br>
-
+  <input id="email" placeholder="Correo"><br><br>
+  <input id="password" type="password" placeholder="Contraseña"><br><br>
+  
   <button onclick="login()">Entrar</button>
   <button onclick="register()">Crear cuenta</button>
   <button onclick="guestLogin()">Invitado</button>
@@ -62,10 +67,6 @@ input {
 <!-- EQUIPOS -->
 <div id="teams" style="display:none;">
   <h2>Equipos</h2>
-
-  <!-- 🔥 NUEVO BOTÓN GLOBAL -->
-  <button onclick="rankingGlobal()">🏆 Ranking Global</button>
-
   <button onclick="crearEquipo()">➕ Crear equipo</button>
   <div id="listaEquipos"></div>
 </div>
@@ -73,9 +74,7 @@ input {
 <!-- APP -->
 <div id="app" style="display:none;">
 
-  <div id="leaders" class="card"></div>
-
-  <button onclick="addPlayer()">+ Agregar jugador</button>
+  <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
 
   <div>
     <button onclick="saveDay()">Guardar día</button>
@@ -84,6 +83,8 @@ input {
     <button onclick="newSeason()">Nueva temporada</button>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
+
+  <h3 id="leader"></h3>
 
   <div id="players"></div>
 
@@ -116,8 +117,9 @@ const auth = getAuth();
 const db = getFirestore();
 
 let user = null;
-let teamId = null;
 let isAdminGlobal = false;
+let isAdminTeam = false;
+let teamId = null;
 
 // LOGIN STATE
 onAuthStateChanged(auth, async (u)=>{
@@ -125,46 +127,45 @@ onAuthStateChanged(auth, async (u)=>{
 
  user = u;
 
- isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
-
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
+
+ isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
 
  loadEquipos();
 });
 
-// LOGIN
-window.login = ()=>{
- if(!email.value || !password.value) return alert("Llena los campos");
-
- signInWithEmailAndPassword(auth,email.value,password.value)
- .catch(e=>alert(e.message));
-}
-
-// REGISTER
-window.register = ()=>{
- const correo = email.value.trim();
- const pass = password.value.trim();
-
- if(!correo || !pass) return alert("Llena todo");
-
- if(!correo.includes("@") || !correo.includes(".")){
-   return alert("Email inválido");
+// AUTH
+window.login = async ()=>{
+ try{
+   await signInWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){
+   alert(e.message);
  }
+};
 
- if(pass.length < 6){
-   return alert("Mínimo 6 caracteres");
+window.register = async ()=>{
+ try{
+   if(!email.value) return alert("Escribe un correo");
+   if(password.value.length < 6) return alert("Mínimo 6 caracteres");
+
+   await createUserWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){
+   alert(e.message);
  }
-
- createUserWithEmailAndPassword(auth,correo,pass)
- .then(()=>alert("Cuenta creada 🔥"))
- .catch(e=>alert(e.message));
-}
+};
 
 window.guestLogin = ()=>signInAnonymously(auth);
-window.logout = ()=>{ signOut(auth); location.reload(); }
 
+window.logout = ()=>{
+ signOut(auth);
+ location.reload();
+}
+
+// ---------------------
 // EQUIPOS
+// ---------------------
+
 async function loadEquipos(){
  const snap = await getDocs(collection(db,"equipos"));
  const cont = document.getElementById("listaEquipos");
@@ -173,19 +174,22 @@ async function loadEquipos(){
  snap.forEach(d=>{
    const e = d.data();
 
-   if(isAdminGlobal || e.admin === user.email){
-     cont.innerHTML += `
-     <div class="card">
-       ${e.nombre}
-       <br>
-       <button onclick="entrarEquipo('${d.id}')">Entrar</button>
-     </div>`;
-   }
+   cont.innerHTML += `
+   <div class="card">
+     ${e.nombre}
+     <br>
+     <button onclick="entrarEquipo('${d.id}','${e.admin}')">Entrar</button>
+
+     ${(isAdminGlobal || e.admin === user.email) 
+       ? `<button onclick="eliminarEquipo('${d.id}')">❌ Eliminar</button>` 
+       : ""}
+
+   </div>`;
  });
 }
 
 window.crearEquipo = async ()=>{
- if(user.isAnonymous) return alert("Solo usuarios registrados");
+ if(user.isAnonymous) return alert("Regístrate para crear equipos");
 
  const nombre = prompt("Nombre del equipo");
  if(!nombre) return;
@@ -196,55 +200,83 @@ window.crearEquipo = async ()=>{
  });
 
  loadEquipos();
-}
+};
 
-// ENTRAR
-window.entrarEquipo = (id)=>{
+// 🔥 ELIMINAR EQUIPO
+window.eliminarEquipo = async (id)=>{
+ if(!confirm("¿Eliminar equipo completo?")) return;
+
+ const jugadoresSnap = await getDocs(collection(db,"equipos",id,"jugadores"));
+
+ for(const j of jugadoresSnap.docs){
+   await deleteDoc(doc(db,"equipos",id,"jugadores",j.id));
+ }
+
+ await deleteDoc(doc(db,"equipos",id));
+
+ loadEquipos();
+};
+
+// ---------------------
+// ENTRAR EQUIPO
+// ---------------------
+
+window.entrarEquipo = (id, adminEmail)=>{
  teamId = id;
+
+ isAdminTeam = (user.email === adminEmail);
+
  document.getElementById("teams").style.display="none";
  document.getElementById("app").style.display="block";
- loadPlayers();
-}
 
-// PLAYERS
+ loadPlayers();
+};
+
+// ---------------------
+// JUGADORES
+// ---------------------
+
 async function loadPlayers(){
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
  const container = document.getElementById("players");
  container.innerHTML="";
 
  let topHR = 0;
- let topAVG = 0;
- let leaderHR = "";
- let leaderAVG = "";
+ let leaderName = "";
 
  snap.forEach(docSnap=>{
    const p = docSnap.data();
-   const avg = p.ab ? (p.h / p.ab).toFixed(3) : 0;
 
-   if(p.hr > topHR){ topHR = p.hr; leaderHR = p.nombre; }
-   if(avg > topAVG){ topAVG = avg; leaderAVG = p.nombre; }
+   if(p.hr > topHR){
+     topHR = p.hr;
+     leaderName = p.nombre;
+   }
 
    container.innerHTML += `
    <div class="player">
-     <input value="${p.nombre}" readonly>
-     <p>AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}</p>
+     <input value="${p.nombre}" readonly style="background:#d1d5db;color:black;">
+     <p>AB:${p.ab} H:${p.h} HR:${p.hr}</p>
 
      <button class="out" onclick="update('${docSnap.id}','out')">OUT</button>
      <button class="hit" onclick="update('${docSnap.id}','hit')">HIT</button>
      <button class="hr" onclick="update('${docSnap.id}','hr')">HR</button>
 
-     <button onclick="removePlayer('${docSnap.id}')">X</button>
+     ${(isAdminTeam || isAdminGlobal) ? `<button onclick="removePlayer('${docSnap.id}')">X</button>`:""}
    </div>
    `;
  });
 
- document.getElementById("leaders").innerHTML =
- `🏆 AVG líder: ${leaderAVG || "Nadie"} (${topAVG})
- <br>🔥 HR líder: ${leaderHR || "Nadie"} (${topHR})`;
+ document.getElementById("leader").innerText =
+   "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
-// ADD PLAYER
+// ---------------------
+// AGREGAR
+// ---------------------
+
 window.addPlayer = async ()=>{
+ if(!(isAdminTeam || isAdminGlobal)) return alert("Solo admin");
+
  const name = prompt("Nombre jugador");
  if(!name) return;
 
@@ -253,9 +285,12 @@ window.addPlayer = async ()=>{
  });
 
  loadPlayers();
-}
+};
 
+// ---------------------
 // UPDATE
+// ---------------------
+
 window.update = async (id,type)=>{
  const ref = doc(db,"equipos",teamId,"jugadores",id);
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
@@ -271,16 +306,25 @@ window.update = async (id,type)=>{
 
  await updateDoc(ref,player);
  loadPlayers();
-}
+};
 
-// DELETE
+// ---------------------
+// ELIMINAR JUGADOR
+// ---------------------
+
 window.removePlayer = async (id)=>{
+ if(!(isAdminTeam || isAdminGlobal)) return;
  await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
  loadPlayers();
-}
+};
 
+// ---------------------
 // NUEVA TEMPORADA
+// ---------------------
+
 window.newSeason = async ()=>{
+ if(!(isAdminTeam || isAdminGlobal)) return;
+
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
 
  snap.forEach(async d=>{
@@ -290,71 +334,15 @@ window.newSeason = async ()=>{
  });
 
  loadPlayers();
-}
+};
 
-// 🔥 RANKING EQUIPO (ARREGLADO)
-window.showRanking = async ()=>{
- const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
+// ---------------------
+// EXTRA
+// ---------------------
 
- let jugadores = [];
-
- snap.forEach(doc=>{
-   const p = doc.data();
-   const avg = p.ab ? (p.h / p.ab) : 0;
-
-   jugadores.push({
-     nombre:p.nombre,
-     avg:avg
-   });
- });
-
- jugadores.sort((a,b)=>b.avg - a.avg);
-
- let texto = "🏆 Ranking Equipo\n\n";
-
- jugadores.forEach((p,i)=>{
-   texto += `${i+1}. ${p.nombre} - ${p.avg.toFixed(3)}\n`;
- });
-
- alert(texto);
-}
-
-// 🔥 RANKING GLOBAL (NUEVO)
-window.rankingGlobal = async ()=>{
- if(!isAdminGlobal) return alert("Solo admin global");
-
- const equiposSnap = await getDocs(collection(db,"equipos"));
-
- let jugadores = [];
-
- for(const equipo of equiposSnap.docs){
-   const jugadoresSnap = await getDocs(collection(db,"equipos",equipo.id,"jugadores"));
-
-   jugadoresSnap.forEach(j=>{
-     const p = j.data();
-     const avg = p.ab ? (p.h / p.ab) : 0;
-
-     jugadores.push({
-       nombre: p.nombre,
-       avg: avg
-     });
-   });
- }
-
- jugadores.sort((a,b)=>b.avg - a.avg);
-
- let texto = "🏆 Ranking Global\n\n";
-
- jugadores.slice(0,10).forEach((p,i)=>{
-   texto += `${i+1}. ${p.nombre} - ${p.avg.toFixed(3)}\n`;
- });
-
- alert(texto);
-}
-
-// HISTORIAL (SIN TOCAR)
 window.saveDay = ()=>alert("Guardado 🔥");
-window.showHistory = ()=>alert("Historial próximamente 🔥");
+window.showHistory = ()=>alert("Historial aún no activo");
+window.showRanking = ()=>alert("Ranking 🔥");
 
 </script>
 
