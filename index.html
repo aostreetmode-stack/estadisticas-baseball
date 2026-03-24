@@ -88,12 +88,11 @@ let equipoActual = null;
 let jugadores = [];
 let historial = [];
 
-function getEmail(){ return document.getElementById("emailInput").value; }
-function getPass(){ return document.getElementById("passInput").value; }
+/* ================= LOGIN ================= */
 
 function login(){
-  let e = getEmail();
-  let p = getPass();
+  let e = document.getElementById("emailInput").value;
+  let p = document.getElementById("passInput").value;
 
   if(!e || !p){
     alert("Llena todo");
@@ -101,12 +100,15 @@ function login(){
   }
 
   usuario = e;
-  entrarEquipos();
+
+  setTimeout(() => {
+    entrarEquipos();
+  }, 100);
 }
 
 function crearCuenta(){
-  let e = getEmail();
-  let p = getPass();
+  let e = document.getElementById("emailInput").value;
+  let p = document.getElementById("passInput").value;
 
   if(!e || !p){
     alert("Llena todo");
@@ -114,14 +116,23 @@ function crearCuenta(){
   }
 
   usuario = e;
+
   alert("Cuenta creada");
-  entrarEquipos();
+
+  setTimeout(() => {
+    entrarEquipos();
+  }, 100);
 }
 
 function invitado(){
   usuario = "invitado";
-  entrarEquipos();
+
+  setTimeout(() => {
+    entrarEquipos();
+  }, 100);
 }
+
+/* ================= EQUIPOS ================= */
 
 function entrarEquipos(){
   document.getElementById("login").style.display="none";
@@ -142,7 +153,6 @@ function crearEquipo(){
 
 function renderEquipos(){
   let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
-
   let cont = document.getElementById("listaEquipos");
   cont.innerHTML="";
 
@@ -183,6 +193,8 @@ function guardarEquipo(){
   localStorage.setItem("equipos", JSON.stringify(equipos));
 }
 
+/* ================= JUGADORES ================= */
+
 function agregarJugador(){
   let n = prompt("Nombre jugador");
   if(!n) return;
@@ -214,6 +226,8 @@ function out(i){ jugadores[i].AB++; renderJugadores(); }
 function hit(i){ jugadores[i].AB++; jugadores[i].H++; renderJugadores(); }
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; renderJugadores(); }
 
+/* ================= HISTORIAL ================= */
+
 function guardarDia(){
   historial.push(JSON.parse(JSON.stringify(jugadores)));
   guardarEquipo();
@@ -236,6 +250,8 @@ function verHistorial(){
 
   alert(txt);
 }
+
+/* ================= RANKING ================= */
 
 function verRanking(){
   let lista=[...jugadores];
@@ -275,6 +291,8 @@ function rankingGlobal(){
 
   alert(txt);
 }
+
+/* ================= OTROS ================= */
 
 function nuevaTemp(){
   jugadores.forEach(j=>{
