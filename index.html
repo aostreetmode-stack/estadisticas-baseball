@@ -3,290 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Softball Stats Pro</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#1f2937;color:white;}
-.container{padding:15px;}
-
-.player{background:#374151;padding:12px;border-radius:12px;margin-bottom:12px;position:relative;}
-input{width:100%;padding:10px;border-radius:8px;border:none;margin-bottom:10px;}
-.row{display:flex;gap:10px;}
-button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:bold;}
-
-.out{background:#ef4444;}
-.hit{background:#d1d5db;color:black;}
-.hr{background:#22c55e;}
-
-.delete{
-position:absolute;right:10px;top:10px;
-background:#ef4444;color:white;
-width:40px;height:40px;border-radius:10px;
+body{
+  margin:0;
+  font-family:Arial;
+  background:#1f2a38;
+  color:white;
 }
+
+h1{text-align:center;}
 
 .card{
-background:#374151;
-padding:12px;
-border-radius:12px;
-margin-top:15px;
+  background:#2f3c4f;
+  padding:10px;
+  margin:10px;
+  border-radius:15px;
 }
 
-.hidden{display:none;}
-.locked{background:#9ca3af;}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
+input{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  font-size:18px;
 }
 
-th{background:#111827;padding:8px;}
-td{padding:8px;border-bottom:1px solid #555;text-align:center;}
+button{
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  margin:5px;
+  font-size:16px;
+}
+
+.out{background:red;color:white;}
+.hit{background:#ccc;}
+.hr{background:green;color:white;}
+.delete{
+  background:red;
+  float:right;
+}
+
+.top{
+  background:#2f3c4f;
+  padding:10px;
+  border-radius:15px;
+  margin:10px;
+}
+
+#loginScreen{padding:20px;}
 </style>
 </head>
 
 <body>
-<div class="container">
 
 <!-- LOGIN -->
-<div id="loginBox">
-<h2>Login</h2>
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Entrar</button>
-<button onclick="register()">Crear cuenta</button>
-<button onclick="guest()">Invitado</button>
+<div id="loginScreen">
+  <h1>Login</h1>
+  <input id="email" placeholder="Email">
+  <br><br>
+  <input id="password" type="password" placeholder="Password">
+  <br><br>
+  <button onclick="login()">Entrar</button>
+  <button onclick="register()">Crear cuenta</button>
+  <button onclick="guest()">Invitado</button>
 </div>
 
 <!-- APP -->
-<div id="appBox" class="hidden">
+<div id="appScreen" style="display:none">
 
-<div id="leaders" class="card"></div>
+<h1>⚾ Estadísticas Softball</h1>
+
+<div class="top" id="lideres"></div>
 
 <div id="players"></div>
 
-<div class="card">
-<button onclick="saveDay()">Guardar día</button>
-<button onclick="toggleHistory()">Historial</button>
-<button onclick="showRanking()">Ranking</button>
-<button onclick="newSeason()">Nueva temporada</button>
+<div style="padding:10px;">
+  <button onclick="guardarDia()">Guardar día</button>
+  <button onclick="verHistorial()">Historial</button>
+  <button onclick="verRanking()">Ranking</button>
+  <button onclick="nuevaTemporada()">Nueva temporada</button>
+  <button onclick="logout()">Cerrar sesión</button>
 </div>
 
-<div id="historyBox" class="card hidden"></div>
-<div id="rankingBox" class="card hidden"></div>
-
-<button onclick="logout()">Cerrar sesión</button>
-
-</div>
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyCDF4...",
-authDomain: "softball-stats-44e46.firebaseapp.com",
-projectId: "softball-stats-44e46",
-storageBucket: "softball-stats-44e46.appspot.com",
-messagingSenderId: "239247616602",
-appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
+  apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
+  authDomain: "softball-stats-44e46.firebaseapp.com",
+  projectId: "softball-stats-44e46",
+  storageBucket: "softball-stats-44e46.appspot.com",
+  messagingSenderId: "239247616602",
+  appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getDatabase(app);
 
-let players=[];
-let history=[];
-let uid="";
-
-window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value);
-window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value);
-window.guest=()=>signInAnonymously(auth);
-window.logout=()=>signOut(auth);
-
-onAuthStateChanged(auth, async (user)=>{
-if(user){
-uid=user.uid;
-loginBox.classList.add("hidden");
-appBox.classList.remove("hidden");
-
-await loadData();
-createPlayers();
-
-}else{
-loginBox.classList.remove("hidden");
-appBox.classList.add("hidden");
-}
-});
-
-async function loadData(){
-let p=await get(ref(db,"users/"+uid+"/players"));
-let h=await get(ref(db,"users/"+uid+"/history"));
-
-if(p.exists()) players=p.val();
-if(h.exists()) history=h.val();
-}
-
-function saveAll(){
-set(ref(db,"users/"+uid+"/players"),players);
-set(ref(db,"users/"+uid+"/history"),history);
-}
-
-function createPlayers(){
-let c=document.getElementById("players");
-c.innerHTML="";
-
-if(players.length===0){
-for(let i=0;i<9;i++){
-players.push({name:"",ab:0,h:0,hr:0,locked:false});
-}
-}
-
-players.forEach((p,i)=>{
-
-let div=document.createElement("div");
-div.className="player";
-
-div.innerHTML=`
-<button class="delete" onclick="deletePlayer(${i})">X</button>
-
-<input value="${p.name}" ${p.locked?"disabled class='locked'":""}
-placeholder="Jugador ${i+1}"
-onblur="lockName(${i},this.value)">
-
-<div id="stats${i}"></div>
-
-<div class="row">
-<button class="out" onclick="update(${i},'out')">OUT</button>
-<button class="hit" onclick="update(${i},'hit')">HIT</button>
-<button class="hr" onclick="update(${i},'hr')">HR</button>
-</div>
-`;
-
-c.appendChild(div);
-});
-
-render();
-updateLeaders();
-}
-
-window.lockName=(i,v)=>{
-if(!v) return;
-players[i].name=v;
-players[i].locked=true;
-saveAll();
-createPlayers();
+window.login = () => {
+  signInWithEmailAndPassword(auth, email.value, password.value)
+  .catch(e=>alert(e.message));
 };
 
-window.update=(i,t)=>{
-players[i].ab++;
-if(t==="hit") players[i].h++;
-if(t==="hr"){players[i].h++;players[i].hr++;}
-render();
-updateLeaders();
-saveAll();
+window.register = () => {
+  createUserWithEmailAndPassword(auth, email.value, password.value)
+  .then(()=>alert("Cuenta creada"))
+  .catch(e=>alert(e.message));
 };
 
-window.deletePlayer=(i)=>{
-players[i]={name:"",ab:0,h:0,hr:0,locked:false};
-saveAll();
-createPlayers();
+window.guest = () => {
+  signInAnonymously(auth);
 };
 
-function render(){
-players.forEach((p,i)=>{
-let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
-document.getElementById("stats"+i).innerText=
-`#${i+1} AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}`;
+window.logout = () => signOut(auth);
+
+onAuthStateChanged(auth,user=>{
+  if(user){
+    loginScreen.style.display="none";
+    appScreen.style.display="block";
+  }else{
+    loginScreen.style.display="block";
+    appScreen.style.display="none";
+  }
 });
-}
-
-function updateLeaders(){
-let best=null;
-
-players.forEach(p=>{
-if(!p.name) return;
-let avg=p.ab?(p.h/p.ab):0;
-if(!best || avg>best.avg){
-best={name:p.name,avg:avg.toFixed(3)};
-}
-});
-
-leaders.innerHTML=`🏆 AVG líder: ${best?best.name+" ("+best.avg+")":"---"}`;
-}
-
-// GUARDAR DÍA
-window.saveDay=()=>{
-let today=new Date().toLocaleString();
-
-history.push({
-date:today,
-players:JSON.parse(JSON.stringify(players))
-});
-
-saveAll();
-alert("Guardado");
-};
-
-// HISTORIAL
-window.toggleHistory=()=>{
-historyBox.classList.toggle("hidden");
-
-let html="<table><tr><th>#</th><th>Fecha</th><th>Jugadores</th></tr>";
-
-history.forEach((d,i)=>{
-let names=d.players.map(p=>p.name).join(", ");
-html+=`<tr><td>${i+1}</td><td>${d.date}</td><td>${names}</td></tr>`;
-});
-
-html+="</table>";
-
-historyBox.innerHTML=html;
-};
-
-// RANKING
-window.showRanking=()=>{
-rankingBox.classList.toggle("hidden");
-
-let sorted=[...players].filter(p=>p.name).sort((a,b)=>{
-let avgA=a.ab?(a.h/a.ab):0;
-let avgB=b.ab?(b.h/b.ab):0;
-return avgB-avgA;
-});
-
-let html="<table><tr><th>#</th><th>Jugador</th><th>AVG</th><th>H</th><th>HR</th></tr>";
-
-sorted.forEach((p,i)=>{
-let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
-
-html+=`<tr>
-<td>${i+1}</td>
-<td>${p.name}</td>
-<td>${avg}</td>
-<td>${p.h}</td>
-<td>${p.hr}</td>
-</tr>`;
-});
-
-html+="</table>";
-
-rankingBox.innerHTML=html;
-};
-
-// NUEVA TEMPORADA
-window.newSeason=()=>{
-players.forEach(p=>{
-p.ab=0;p.h=0;p.hr=0;
-});
-saveAll();
-render();
-updateLeaders();
-};
 
 </script>
+
+<script>
+
+let players = JSON.parse(localStorage.getItem("players")) || [];
+
+function save(){localStorage.setItem("players",JSON.stringify(players));}
+
+function render(){
+  let html="";
+  players.forEach((p,i)=>{
+
+    html+=`
+    <div class="card">
+
+      <button class="delete" onclick="del(${i})">X</button>
+
+      <input value="${p.name}" ${p.locked?"disabled":""}
+      onblur="lock(${i},this.value)">
+
+      <p>#${i+1} | AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${calc(p)}</p>
+
+      <button class="out" onclick="out(${i})">OUT</button>
+      <button class="hit" onclick="hit(${i})">HIT</button>
+      <button class="hr" onclick="hr(${i})">HR</button>
+
+    </div>`;
+  });
+
+  playersDiv.innerHTML=html;
+  lideres();
+}
+
+function lock(i,name){
+  if(name.trim()==="")return;
+  players[i].name=name;
+  players[i].locked=true;
+  save();
+  render();
+}
+
+function add(){
+  players.push({name:"Jugador",ab:0,h:0,hr:0,locked:false});
+  save();render();
+}
+
+function del(i){
+  players.splice(i,1);
+  save();render();
+}
+
+function out(i){players[i].ab++;save();render();}
+function hit(i){players[i].ab++;players[i].h++;save();render();}
+function hr(i){players[i].ab++;players[i].h++;players[i].hr++;save();render();}
+
+function calc(p){return p.ab? (p.h/p.ab).toFixed(3):"0.000";}
+
+function lideres(){
+  if(players.length===0){lideresDiv.innerHTML="No hay datos";return;}
+  let avg=players.reduce((a,b)=> calc(b)>calc(a)?b:a);
+  let hr=players.reduce((a,b)=> b.hr>a.hr?b:a);
+  lideresDiv.innerHTML=`🏆 AVG líder: ${avg.name} (${calc(avg)})<br>💣 HR líder: ${hr.name} (${hr.hr})`;
+}
+
+function guardarDia(){
+  let texto=new Date().toLocaleString()+"\n";
+  players.forEach(p=>{
+    texto+=`${p.name} | H:${p.h} HR:${p.hr} AVG:${calc(p)}\n`;
+  });
+  let hist=JSON.parse(localStorage.getItem("historial"))||[];
+  hist.push(texto);
+  localStorage.setItem("historial",JSON.stringify(hist));
+  alert("Guardado");
+}
+
+function verHistorial(){
+  let hist=JSON.parse(localStorage.getItem("historial"))||[];
+  alert(hist.join("\n\n"));
+}
+
+function verRanking(){
+  let r=[...players].sort((a,b)=>calc(b)-calc(a));
+  let texto="RANKING\n\n";
+  r.forEach((p,i)=>{
+    texto+=`${i+1}. ${p.name} AVG:${calc(p)} HR:${p.hr}\n`;
+  });
+  alert(texto);
+}
+
+function nuevaTemporada(){
+  players.forEach(p=>{p.ab=0;p.h=0;p.hr=0;});
+  save();render();
+}
+
+render();
+
+</script>
+
 </body>
 </html>
