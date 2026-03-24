@@ -188,7 +188,11 @@ function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
   let eq = equipos[i];
 
-  if(eq.owner !== usuario){
+  // 🔥 ADMIN TOTAL ACCESS
+  if(
+    eq.owner !== usuario &&
+    !(usuario === "ortelio.garciaulloa@gmail.com" && passActual === "AyO*9211")
+  ){
     alert("No puedes entrar a este equipo");
     return;
   }
@@ -218,7 +222,7 @@ function agregarJugador(){
   if(!n) return;
 
   jugadores.push({nombre:n, AB:0, H:0, HR:0});
-  guardarEquipo(); // 🔥 FIX
+  guardarEquipo();
   renderJugadores();
 }
 
@@ -317,7 +321,7 @@ function nuevaTemp(){
   jugadores.forEach(j=>{
     j.AB=0; j.H=0; j.HR=0;
   });
-  guardarEquipo(); // 🔥 FIX
+  guardarEquipo();
   renderJugadores();
 }
 
