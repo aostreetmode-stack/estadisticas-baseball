@@ -12,15 +12,10 @@ body {
   color:white;
   text-align:center;
   margin:0;
-  padding:0;
-}
-
-h1 {
-  margin-top:20px;
 }
 
 button {
-  padding:12px;
+  padding:10px;
   margin:5px;
   border:none;
   border-radius:10px;
@@ -38,20 +33,16 @@ button {
 }
 
 input {
-  padding:10px;
+  padding:8px;
   border-radius:10px;
   border:none;
-  width:90%;
+  width:80%;
   max-width:300px;
 }
 
 .out { background:red; }
 .hit { background:gray; }
 .hr { background:green; }
-
-#login {
-  padding:20px;
-}
 </style>
 </head>
 
@@ -59,6 +50,7 @@ input {
 
 <h1>⚾ Estadísticas Softball</h1>
 
+<!-- LOGIN -->
 <div id="login">
   <input id="email" placeholder="Correo"><br><br>
   <input id="password" type="password" placeholder="Contraseña"><br><br>
@@ -68,6 +60,14 @@ input {
   <button onclick="guestLogin()">Invitado</button>
 </div>
 
+<!-- EQUIPOS -->
+<div id="teams" style="display:none;">
+  <h2>Equipos</h2>
+  <button onclick="crearEquipo()">➕ Crear equipo</button>
+  <div id="listaEquipos"></div>
+</div>
+
+<!-- APP -->
 <div id="app" style="display:none;">
 
   <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
@@ -111,70 +111,111 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore();
 
-let userId = null;
-let isAdmin = false;
+let user = null;
+let isAdminGlobal = false;
+let isAdminTeam = false;
+let teamId = null;
 
-onAuthStateChanged(auth, async (user) => {
- if(user){
-   userId = user.uid;
-   isAdmin = !user.isAnonymous;
+// 🔐 LOGIN STATE
+onAuthStateChanged(auth, async (u)=>{
+ if(!u) return;
 
-   document.getElementById("login").style.display="none";
-   document.getElementById("app").style.display="block";
+ user = u;
 
-   loadPlayers();
- }
+ document.getElementById("login").style.display="none";
+ document.getElementById("teams").style.display="block";
+
+ isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
+
+ loadEquipos();
 });
 
-window.login = async ()=>{
- try{
-   await signInWithEmailAndPassword(auth, email.value, password.value);
- }catch(e){ alert(e.message); }
+// AUTH
+window.login = ()=>signInWithEmailAndPassword(auth,email.value,password.value);
+window.register = ()=>createUserWithEmailAndPassword(auth,email.value,password.value);
+window.guestLogin = ()=>signInAnonymously(auth);
+window.logout = ()=>{ signOut(auth); location.reload(); }
+
+// ---------------------
+// 🧢 EQUIPOS
+// ---------------------
+
+async function loadEquipos(){
+ const snap = await getDocs(collection(db,"equipos"));
+ const cont = document.getElementById("listaEquipos");
+ cont.innerHTML="";
+
+ snap.forEach(d=>{
+   const e = d.data();
+
+   cont.innerHTML += `
+   <div style="margin:10px;padding:10px;background:#2f3e52;border-radius:10px;">
+     ${e.nombre}
+     <br>
+     <button onclick="entrarEquipo('${d.id}','${e.admin}')">Entrar</button>
+   </div>`;
+ });
 }
 
-window.register = async ()=>{
- try{
-   await createUserWithEmailAndPassword(auth, email.value, password.value);
- }catch(e){ alert(e.message); }
+window.crearEquipo = async ()=>{
+ if(user.isAnonymous) return alert("Solo usuarios registrados");
+
+ const nombre = prompt("Nombre del equipo");
+ if(!nombre) return;
+
+ await addDoc(collection(db,"equipos"),{
+   nombre,
+   admin: user.email
+ });
+
+ loadEquipos();
 }
 
-window.guestLogin = async ()=>{
- try{
-   await signInAnonymously(auth);
- }catch(e){ alert(e.message); }
+// ---------------------
+// 🎯 ENTRAR EQUIPO
+// ---------------------
+
+window.entrarEquipo = (id, adminEmail)=>{
+ teamId = id;
+
+ isAdminTeam = (user.email === adminEmail);
+
+ document.getElementById("teams").style.display="none";
+ document.getElementById("app").style.display="block";
+
+ loadPlayers();
 }
 
-window.logout = ()=>{
- signOut(auth);
- location.reload();
-}
+// ---------------------
+// 👥 JUGADORES
+// ---------------------
 
 async function loadPlayers(){
- const snapshot = await getDocs(collection(db,"users",userId,"players"));
+ const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
  const container = document.getElementById("players");
  container.innerHTML="";
 
  let topHR = 0;
  let leaderName = "";
 
- snapshot.forEach(docSnap=>{
+ snap.forEach(docSnap=>{
    const p = docSnap.data();
 
    if(p.hr > topHR){
      topHR = p.hr;
-     leaderName = p.name;
+     leaderName = p.nombre;
    }
 
    container.innerHTML += `
    <div class="player">
-     <input value="${p.name}" readonly style="background:#d1d5db;color:black;">
+     <input value="${p.nombre}" readonly style="background:#d1d5db;color:black;">
      <p>AB:${p.ab} H:${p.h} HR:${p.hr}</p>
 
      <button class="out" onclick="update('${docSnap.id}','out')">OUT</button>
      <button class="hit" onclick="update('${docSnap.id}','hit')">HIT</button>
      <button class="hr" onclick="update('${docSnap.id}','hr')">HR</button>
 
-     ${isAdmin ? `<button onclick="removePlayer('${docSnap.id}')">X</button>`:""}
+     ${(isAdminTeam || isAdminGlobal) ? `<button onclick="removePlayer('${docSnap.id}')">X</button>`:""}
    </div>
    `;
  });
@@ -183,22 +224,30 @@ async function loadPlayers(){
    "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
+// ---------------------
+// ➕ AGREGAR
+// ---------------------
+
 window.addPlayer = async ()=>{
- if(!isAdmin) return alert("Solo admin");
+ if(!(isAdminTeam || isAdminGlobal)) return alert("Solo admin");
 
  const name = prompt("Nombre jugador");
  if(!name) return;
 
- await addDoc(collection(db,"users",userId,"players"),{
-   name, ab:0,h:0,hr:0
+ await addDoc(collection(db,"equipos",teamId,"jugadores"),{
+   nombre:name, ab:0,h:0,hr:0
  });
 
  loadPlayers();
 }
 
+// ---------------------
+// ⚾ UPDATE
+// ---------------------
+
 window.update = async (id,type)=>{
- const ref = doc(db,"users",userId,"players",id);
- const snap = await getDocs(collection(db,"users",userId,"players"));
+ const ref = doc(db,"equipos",teamId,"jugadores",id);
+ const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
 
  let player;
  snap.forEach(d=>{
@@ -213,19 +262,27 @@ window.update = async (id,type)=>{
  loadPlayers();
 }
 
+// ---------------------
+// ❌ ELIMINAR
+// ---------------------
+
 window.removePlayer = async (id)=>{
- if(!isAdmin) return;
- await deleteDoc(doc(db,"users",userId,"players",id));
+ if(!(isAdminTeam || isAdminGlobal)) return;
+ await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
  loadPlayers();
 }
 
-window.newSeason = async ()=>{
- if(!isAdmin) return;
+// ---------------------
+// 🔄 NUEVA TEMPORADA
+// ---------------------
 
- const snap = await getDocs(collection(db,"users",userId,"players"));
+window.newSeason = async ()=>{
+ if(!(isAdminTeam || isAdminGlobal)) return;
+
+ const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
 
  snap.forEach(async d=>{
-   await updateDoc(doc(db,"users",userId,"players",d.id),{
+   await updateDoc(doc(db,"equipos",teamId,"jugadores",d.id),{
      ab:0,h:0,hr:0
    });
  });
@@ -233,14 +290,18 @@ window.newSeason = async ()=>{
  loadPlayers();
 }
 
-window.saveDay = ()=>{
- alert("Guardado en Firebase 🔥");
-}
+// ---------------------
+// EXTRA
+// ---------------------
+
+window.saveDay = ()=>alert("Guardado 🔥");
 
 window.showRanking = ()=>{
- alert("Ranking activo 🔥");
+ if(!isAdminGlobal) return alert("Solo admin global");
+ alert("Ranking global próximamente 🔥");
 }
 
 </script>
+
 </body>
 </html>
