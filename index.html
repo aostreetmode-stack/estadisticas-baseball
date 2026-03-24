@@ -2,53 +2,48 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Softball Stats Pro</title>
 
-<!-- 🔥 FIREBASE SIN MODULE (FIX REAL) -->
+<!-- 🔥 FIX ZOOM -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<title>Estadísticas Softball</title>
+
+<!-- 🔥 FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+<!-- 🔥 PWA (INSTALAR APP COMO ANTES) -->
+<link rel="manifest" href="manifest.json">
+
 <style>
-body {
-  font-family: Arial;
-  background:#1f2c3a;
-  color:white;
-  text-align:center;
+body{
+ background:#1f2c3a;
+ color:white;
+ text-align:center;
+ font-family:Arial;
 }
 
-button {
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
+button{
+ padding:10px;
+ margin:5px;
+ border-radius:10px;
+ border:none;
 }
 
-.player {
-  background:#2f3e52;
-  margin:10px;
-  padding:10px;
-  border-radius:15px;
+.player{
+ background:#2f3e52;
+ margin:10px;
+ padding:10px;
+ border-radius:10px;
 }
 
-.card {
-  background:#2f3e52;
-  margin:10px;
-  padding:10px;
-  border-radius:10px;
+.card{
+ background:#2f3e52;
+ margin:10px;
+ padding:10px;
+ border-radius:10px;
 }
-
-input {
-  padding:8px;
-  border-radius:10px;
-  border:none;
-  width:60%;
-}
-
-.out { background:red; }
-.hit { background:gray; }
-.hr { background:green; }
 </style>
 </head>
 
@@ -58,40 +53,40 @@ input {
 
 <!-- LOGIN -->
 <div id="login">
-  <input id="email" placeholder="Correo"><br><br>
-  <input id="password" type="password" placeholder="Contraseña"><br><br>
-  
-  <button onclick="login()">Entrar</button>
-  <button onclick="register()">Crear cuenta</button>
-  <button onclick="guestLogin()">Invitado</button>
+<input id="email" placeholder="Correo"><br><br>
+<input id="password" type="password" placeholder="Contraseña"><br><br>
+
+<button onclick="login()">Entrar</button>
+<button onclick="register()">Crear cuenta</button>
+<button onclick="guestLogin()">Invitado</button>
 </div>
 
 <!-- EQUIPOS -->
 <div id="teams" style="display:none;">
-  <h2>Equipos</h2>
+<h2>Equipos</h2>
 
-  <button onclick="rankingGlobal()">🏆 Ranking Global</button>
-  <button onclick="crearEquipo()">➕ Crear equipo</button>
+<button onclick="rankingGlobal()">🏆 Ranking Global</button>
+<button onclick="crearEquipo()">+ Crear equipo</button>
 
-  <div id="listaEquipos"></div>
+<div id="listaEquipos"></div>
 </div>
 
 <!-- APP -->
 <div id="app" style="display:none;">
 
-  <button onclick="addPlayer()">+ Agregar jugador</button>
+<h2 id="teamName"></h2>
 
-  <div>
-    <button onclick="saveDay()">Guardar día</button>
-    <button onclick="showHistory()">Historial</button>
-    <button onclick="showRanking()">Ranking</button>
-    <button onclick="newSeason()">Nueva temporada</button>
-    <button onclick="logout()">Cerrar sesión</button>
-  </div>
+<button onclick="addPlayer()">+ Jugador</button>
 
-  <h3 id="leader"></h3>
+<div>
+<button onclick="saveDay()">Guardar día</button>
+<button onclick="showHistory()">Historial</button>
+<button onclick="showRanking()">Ranking</button>
+<button onclick="newSeason()">Nueva temporada</button>
+<button onclick="logout()">Salir</button>
+</div>
 
-  <div id="players"></div>
+<div id="players"></div>
 
 </div>
 
@@ -108,30 +103,40 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let user = null;
-let teamId = null;
+let user=null;
+let teamId=null;
 
-// 🔐 AUTH
+// 🔥 AUTH
+
 function login(){
- auth.signInWithEmailAndPassword(email.value,password.value);
+ auth.signInWithEmailAndPassword(email.value,password.value)
+ .catch(e=>alert(e.message));
 }
 
 function register(){
- auth.createUserWithEmailAndPassword(email.value,password.value);
+ auth.createUserWithEmailAndPassword(email.value,password.value)
+ .catch(e=>alert(e.message));
 }
 
 function guestLogin(){
- auth.signInAnonymously();
+ auth.signInAnonymously()
+ .catch(e=>alert(e.message));
 }
 
 function logout(){
  location.reload();
 }
 
+// 🔥 FIX LOGIN FLOW
 auth.onAuthStateChanged(u=>{
- if(!u) return;
+ if(!u){
+   document.getElementById("login").style.display="block";
+   document.getElementById("teams").style.display="none";
+   document.getElementById("app").style.display="none";
+   return;
+ }
 
- user = u;
+ user=u;
 
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
@@ -142,25 +147,24 @@ auth.onAuthStateChanged(u=>{
 // ---------------- EQUIPOS ----------------
 
 async function loadEquipos(){
- const snap = await db.collection("equipos").get();
- const cont = document.getElementById("listaEquipos");
+ const snap=await db.collection("equipos").get();
+ const cont=document.getElementById("listaEquipos");
  cont.innerHTML="";
 
  snap.forEach(d=>{
-   const e = d.data();
+  const e=d.data();
 
-   cont.innerHTML += `
-   <div class="card">
-     ${e.nombre}
-     <br>
-     <button onclick="entrarEquipo('${d.id}')">Entrar</button>
-     <button onclick="eliminarEquipo('${d.id}')">❌</button>
-   </div>`;
+  cont.innerHTML+=`
+  <div class="card">
+    ${e.nombre}<br>
+    <button onclick="entrarEquipo('${d.id}','${e.nombre}')">Entrar</button>
+    <button onclick="eliminarEquipo('${d.id}')">❌</button>
+  </div>`;
  });
 }
 
 async function crearEquipo(){
- const nombre = prompt("Nombre equipo");
+ let nombre=prompt("Nombre equipo");
  if(!nombre) return;
 
  await db.collection("equipos").add({nombre});
@@ -168,23 +172,19 @@ async function crearEquipo(){
 }
 
 async function eliminarEquipo(id){
- if(!confirm("Eliminar equipo completo?")) return;
-
- const jugadores = await db.collection("equipos").doc(id).collection("jugadores").get();
- jugadores.forEach(j=>{
-   db.collection("equipos").doc(id).collection("jugadores").doc(j.id).delete();
- });
+ if(!confirm("Eliminar equipo?")) return;
 
  await db.collection("equipos").doc(id).delete();
-
  loadEquipos();
 }
 
-function entrarEquipo(id){
- teamId = id;
+function entrarEquipo(id,nombre){
+ teamId=id;
 
  document.getElementById("teams").style.display="none";
  document.getElementById("app").style.display="block";
+
+ document.getElementById("teamName").innerText=nombre;
 
  loadPlayers();
 }
@@ -192,55 +192,44 @@ function entrarEquipo(id){
 // ---------------- JUGADORES ----------------
 
 async function loadPlayers(){
- const snap = await db.collection("equipos").doc(teamId).collection("jugadores").get();
- const container = document.getElementById("players");
- container.innerHTML="";
+ const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
+ const cont=document.getElementById("players");
+ cont.innerHTML="";
 
- let topHR = 0;
- let leaderName = "";
+ snap.forEach(d=>{
+  const p=d.data();
 
- snap.forEach(doc=>{
-   const p = doc.data();
+  cont.innerHTML+=`
+  <div class="player">
+    ${p.nombre}<br>
+    AB:${p.ab} H:${p.h} HR:${p.hr}<br>
 
-   if(p.hr > topHR){
-     topHR = p.hr;
-     leaderName = p.nombre;
-   }
-
-   container.innerHTML += `
-   <div class="player">
-     ${p.nombre}
-     <p>AB:${p.ab} H:${p.h} HR:${p.hr}</p>
-
-     <button class="out" onclick="update('${doc.id}','out')">OUT</button>
-     <button class="hit" onclick="update('${doc.id}','hit')">HIT</button>
-     <button class="hr" onclick="update('${doc.id}','hr')">HR</button>
-   </div>`;
+    <button onclick="update('${d.id}','out')">OUT</button>
+    <button onclick="update('${d.id}','hit')">HIT</button>
+    <button onclick="update('${d.id}','hr')">HR</button>
+  </div>`;
  });
-
- document.getElementById("leader").innerText =
-   "🔥 Líder HR: " + (leaderName || "Nadie");
 }
 
 async function addPlayer(){
- const name = prompt("Nombre jugador");
+ let name=prompt("Nombre");
  if(!name) return;
 
  await db.collection("equipos").doc(teamId).collection("jugadores").add({
-   nombre:name, ab:0,h:0,hr:0
+  nombre:name,ab:0,h:0,hr:0
  });
 
  loadPlayers();
 }
 
 async function update(id,type){
- const ref = db.collection("equipos").doc(teamId).collection("jugadores").doc(id);
- const docu = await ref.get();
- let p = docu.data();
+ const ref=db.collection("equipos").doc(teamId).collection("jugadores").doc(id);
+ const docu=await ref.get();
+ let p=docu.data();
 
  if(type=="out") p.ab++;
- if(type=="hit"){ p.h++; p.ab++; }
- if(type=="hr"){ p.hr++; p.h++; p.ab++; }
+ if(type=="hit"){p.ab++;p.h++;}
+ if(type=="hr"){p.ab++;p.h++;p.hr++;}
 
  await ref.update(p);
  loadPlayers();
@@ -249,31 +238,34 @@ async function update(id,type){
 // ---------------- HISTORIAL ----------------
 
 async function saveDay(){
- const snap = await db.collection("equipos").doc(teamId).collection("jugadores").get();
+ const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
- let jugadores = [];
+ let jugadores=[];
  snap.forEach(d=>jugadores.push(d.data()));
 
  await db.collection("equipos").doc(teamId).collection("historial").add({
-   fecha:new Date().toLocaleString(),
-   jugadores
+  fecha:new Date().toLocaleString(),
+  jugadores
  });
 
- alert("Día guardado");
+ alert("Guardado");
 }
 
 async function showHistory(){
- const snap = await db.collection("equipos").doc(teamId).collection("historial").get();
+ const snap=await db.collection("equipos").doc(teamId).collection("historial").get();
 
  let txt="HISTORIAL\n\n";
 
  snap.forEach(d=>{
-   let dia=d.data();
-   txt+=dia.fecha+"\n";
-   dia.jugadores.forEach(p=>{
-     txt+=`${p.nombre} H:${p.h} HR:${p.hr}\n`;
-   });
-   txt+="------\n";
+  let dia=d.data();
+
+  txt+=dia.fecha+"\n";
+
+  dia.jugadores.forEach(p=>{
+   txt+=`${p.nombre} H:${p.h} HR:${p.hr}\n`;
+  });
+
+  txt+="------\n";
  });
 
  alert(txt);
@@ -282,56 +274,62 @@ async function showHistory(){
 // ---------------- RANKING ----------------
 
 async function showRanking(){
- const snap = await db.collection("equipos").doc(teamId).collection("jugadores").get();
+ const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
  let arr=[];
+
  snap.forEach(d=>{
-   let p=d.data();
-   let avg=p.ab? p.h/p.ab:0;
-   arr.push({nombre:p.nombre,avg});
+  let p=d.data();
+  let avg=p.ab? p.h/p.ab:0;
+
+  arr.push({nombre:p.nombre,avg});
  });
 
  arr.sort((a,b)=>b.avg-a.avg);
 
  let txt="Ranking\n\n";
+
  arr.forEach((p,i)=>{
-   txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
+  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
  });
 
  alert(txt);
 }
 
 async function rankingGlobal(){
- const equipos = await db.collection("equipos").get();
-
+ const equipos=await db.collection("equipos").get();
  let arr=[];
 
  for(const e of equipos.docs){
-   const jugadores = await db.collection("equipos").doc(e.id).collection("jugadores").get();
+  const jugadores=await db.collection("equipos").doc(e.id).collection("jugadores").get();
 
-   jugadores.forEach(j=>{
-     let p=j.data();
-     let avg=p.ab? p.h/p.ab:0;
-     arr.push({nombre:p.nombre,avg});
-   });
+  jugadores.forEach(j=>{
+   let p=j.data();
+   let avg=p.ab? p.h/p.ab:0;
+
+   arr.push({nombre:p.nombre,avg});
+  });
  }
 
  arr.sort((a,b)=>b.avg-a.avg);
 
  let txt="GLOBAL\n\n";
+
  arr.slice(0,10).forEach((p,i)=>{
-   txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
+  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
  });
 
  alert(txt);
 }
 
+// ---------------- TEMPORADA ----------------
+
 async function newSeason(){
- const snap = await db.collection("equipos").doc(teamId).collection("jugadores").get();
+ const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
  snap.forEach(d=>{
-   db.collection("equipos").doc(teamId).collection("jugadores").doc(d.id)
-   .update({ab:0,h:0,hr:0});
+  db.collection("equipos").doc(teamId).collection("jugadores").doc(d.id)
+  .update({ab:0,h:0,hr:0});
  });
 
  loadPlayers();
