@@ -13,6 +13,11 @@ body {
   text-align:center;
   margin:0;
 }
+
+h1 {
+  margin-top:20px;
+}
+
 button {
   padding:10px;
   margin:5px;
@@ -20,23 +25,35 @@ button {
   border-radius:10px;
   font-weight:bold;
 }
+
 .admin-only { background:#2563eb; color:white; }
+.guest { background:#6b7280; color:white; }
+
 .player {
   background:#2f3e52;
   margin:10px;
   padding:10px;
   border-radius:15px;
 }
+
 input {
-  padding:8px;
+  padding:10px;
   border-radius:10px;
   border:none;
   width:80%;
-  max-width:300px;
+  margin:5px;
 }
-.out { background:red; }
-.hit { background:gray; }
-.hr { background:green; }
+
+.out { background:red; color:white; }
+.hit { background:gray; color:white; }
+.hr { background:green; color:white; }
+
+.card {
+  background:#2f3e52;
+  padding:15px;
+  margin:10px;
+  border-radius:15px;
+}
 </style>
 </head>
 
@@ -46,9 +63,9 @@ input {
 
 <!-- LOGIN -->
 <div id="login">
-  <input id="email" placeholder="Correo"><br><br>
-  <input id="password" type="password" placeholder="Contraseña"><br><br>
-  
+  <input id="email" placeholder="Correo"><br>
+  <input id="password" type="password" placeholder="Contraseña"><br>
+
   <button onclick="login()">Entrar</button>
   <button onclick="register()">Crear cuenta</button>
   <button onclick="guestLogin()">Invitado</button>
@@ -63,17 +80,21 @@ input {
 
 <!-- APP -->
 <div id="app" style="display:none;">
+
+  <div id="leaders" class="card"></div>
+
   <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
 
   <div>
     <button onclick="saveDay()">Guardar día</button>
+    <button onclick="showHistory()">Historial</button>
     <button onclick="showRanking()">Ranking</button>
     <button onclick="newSeason()">Nueva temporada</button>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
-  <h3 id="leader"></h3>
   <div id="players"></div>
+
 </div>
 
 <script type="module">
@@ -103,11 +124,9 @@ const auth = getAuth();
 const db = getFirestore();
 
 let user = null;
-let isAdminGlobal = false;
-let isAdminTeam = false;
 let teamId = null;
 
-// 🔐 LOGIN STATE
+// LOGIN STATE
 onAuthStateChanged(auth, async (u)=>{
  if(!u) return;
 
@@ -115,38 +134,29 @@ onAuthStateChanged(auth, async (u)=>{
 
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
- document.getElementById("app").style.display="none";
-
- isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
 
  loadEquipos();
 });
 
 // AUTH
-window.login = async ()=>{
- try{
-   await signInWithEmailAndPassword(auth,email.value,password.value);
- }catch(e){ alert(e.message); }
+window.login = ()=>{
+ if(!email.value || !password.value) return alert("Llena los campos");
+ signInWithEmailAndPassword(auth,email.value,password.value)
+ .catch(e=>alert(e.message));
 }
 
-window.register = async ()=>{
- try{
-   await createUserWithEmailAndPassword(auth,email.value,password.value);
- }catch(e){ alert(e.message); }
+window.register = ()=>{
+ if(!email.value.includes("@")) return alert("Email inválido");
+ if(password.value.length < 6) return alert("Mínimo 6 caracteres");
+
+ createUserWithEmailAndPassword(auth,email.value,password.value)
+ .catch(e=>alert(e.message));
 }
 
-window.guestLogin = async ()=>{
- await signInAnonymously(auth);
-}
+window.guestLogin = ()=>signInAnonymously(auth);
+window.logout = ()=>{ signOut(auth); location.reload(); }
 
-window.logout = ()=>{
- signOut(auth);
-}
-
-// ---------------------
 // EQUIPOS
-// ---------------------
-
 async function loadEquipos(){
  const snap = await getDocs(collection(db,"equipos"));
  const cont = document.getElementById("listaEquipos");
@@ -156,10 +166,10 @@ async function loadEquipos(){
    const e = d.data();
 
    cont.innerHTML += `
-   <div style="margin:10px;padding:10px;background:#2f3e52;border-radius:10px;">
+   <div class="card">
      ${e.nombre}
      <br>
-     <button onclick="entrarEquipo('${d.id}','${e.admin}')">Entrar</button>
+     <button onclick="entrarEquipo('${d.id}')">Entrar</button>
    </div>`;
  });
 }
@@ -171,20 +181,15 @@ window.crearEquipo = async ()=>{
  if(!nombre) return;
 
  await addDoc(collection(db,"equipos"),{
-   nombre,
-   admin: user.email
+   nombre
  });
 
  loadEquipos();
 }
 
-// ---------------------
-// ENTRAR EQUIPO
-// ---------------------
-
-window.entrarEquipo = (id, adminEmail)=>{
+// ENTRAR
+window.entrarEquipo = (id)=>{
  teamId = id;
- isAdminTeam = (user.email === adminEmail);
 
  document.getElementById("teams").style.display="none";
  document.getElementById("app").style.display="block";
@@ -192,51 +197,45 @@ window.entrarEquipo = (id, adminEmail)=>{
  loadPlayers();
 }
 
-// ---------------------
 // JUGADORES
-// ---------------------
-
 async function loadPlayers(){
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
  const container = document.getElementById("players");
  container.innerHTML="";
 
  let topHR = 0;
- let leaderName = "";
+ let topAVG = 0;
+ let leaderHR = "";
+ let leaderAVG = "";
 
  snap.forEach(docSnap=>{
    const p = docSnap.data();
+   const avg = p.ab ? (p.h / p.ab).toFixed(3) : 0;
 
-   if(p.hr > topHR){
-     topHR = p.hr;
-     leaderName = p.nombre;
-   }
+   if(p.hr > topHR){ topHR = p.hr; leaderHR = p.nombre; }
+   if(avg > topAVG){ topAVG = avg; leaderAVG = p.nombre; }
 
    container.innerHTML += `
    <div class="player">
-     <input value="${p.nombre}" readonly style="background:#d1d5db;color:black;">
-     <p>AB:${p.ab} H:${p.h} HR:${p.hr}</p>
+     <input value="${p.nombre}" readonly>
+     <p>AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}</p>
 
      <button class="out" onclick="update('${docSnap.id}','out')">OUT</button>
      <button class="hit" onclick="update('${docSnap.id}','hit')">HIT</button>
      <button class="hr" onclick="update('${docSnap.id}','hr')">HR</button>
 
-     ${(isAdminTeam || isAdminGlobal) ? `<button onclick="removePlayer('${docSnap.id}')">X</button>`:""}
+     <button onclick="removePlayer('${docSnap.id}')">X</button>
    </div>
    `;
  });
 
- document.getElementById("leader").innerText =
-   "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
+ document.getElementById("leaders").innerHTML =
+ `🏆 AVG líder: ${leaderAVG || "Nadie"} (${topAVG})
+  <br>🔥 HR líder: ${leaderHR || "Nadie"} (${topHR})`;
 }
 
-// ---------------------
-// RESTO IGUAL
-// ---------------------
-
+// ADD PLAYER
 window.addPlayer = async ()=>{
- if(!(isAdminTeam || isAdminGlobal)) return alert("Solo admin");
-
  const name = prompt("Nombre jugador");
  if(!name) return;
 
@@ -247,6 +246,7 @@ window.addPlayer = async ()=>{
  loadPlayers();
 }
 
+// UPDATE
 window.update = async (id,type)=>{
  const ref = doc(db,"equipos",teamId,"jugadores",id);
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
@@ -264,15 +264,14 @@ window.update = async (id,type)=>{
  loadPlayers();
 }
 
+// DELETE
 window.removePlayer = async (id)=>{
- if(!(isAdminTeam || isAdminGlobal)) return;
  await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
  loadPlayers();
 }
 
+// NUEVA TEMPORADA
 window.newSeason = async ()=>{
- if(!(isAdminTeam || isAdminGlobal)) return;
-
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
 
  snap.forEach(async d=>{
@@ -284,8 +283,18 @@ window.newSeason = async ()=>{
  loadPlayers();
 }
 
-window.saveDay = ()=>alert("Guardado 🔥");
-window.showRanking = ()=>alert("Ranking 🔥");
+// HISTORIAL (simple por ahora)
+window.saveDay = ()=>{
+ alert("Día guardado (base lista para historial real)");
+}
+
+window.showHistory = ()=>{
+ alert("Historial próximamente 🔥");
+}
+
+window.showRanking = ()=>{
+ alert("Ranking global próximamente 🔥");
+}
 
 </script>
 
