@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f2937">
+
 <style>
 body{margin:0;font-family:Arial;background:#1f2937;color:white;}
 .container{padding:15px;}
@@ -17,7 +20,7 @@ button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:bold;}
 .hr{background:#22c55e;}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;}
 .btn-white{background:#f3f4f6;color:black;}
-.btn-blue{background:#3b82f6;}
+.btn-blue{background:#3b82f6;color:white;}
 .btn-yellow{background:#facc15;color:black;}
 .card{background:#374151;padding:12px;border-radius:12px;margin-top:15px;}
 table{width:100%;border-collapse:collapse;}
@@ -31,6 +34,9 @@ th,td{padding:8px;border-bottom:1px solid #555;text-align:center;}
 
 <!-- 🔥 LIDERES -->
 <div id="leaders" class="card"></div>
+
+<!-- 🔥 BOTÓN INSTALAR -->
+<button class="btn-blue" onclick="installApp()">Instalar App</button>
 
 <div id="players"></div>
 
@@ -54,14 +60,11 @@ let players = JSON.parse(localStorage.getItem("currentGame")) || [];
 // 🔥 RECUPERAR DATOS VIEJOS
 let oldGame = JSON.parse(localStorage.getItem("game"));
 if (oldGame && history.length === 0) {
-  history.push({
-    date: "Recuperado",
-    data: oldGame
-  });
+  history.push({ date: "Recuperado", data: oldGame });
   localStorage.setItem("history", JSON.stringify(history));
 }
 
-// 🔥 SI NO HAY currentGame USAR ÚLTIMO
+// 🔥 SI NO HAY currentGame
 if (players.length === 0 && history.length > 0) {
   players = JSON.parse(JSON.stringify(history[history.length - 1].data));
 }
@@ -135,7 +138,7 @@ function saveDay(){
   alert("Día guardado");
 }
 
-// 🔥 HISTORIAL EN TABLA
+// 🔥 HISTORIAL
 function showHistory(){
   let output="<div class='card'><h3>Historial</h3>";
 
@@ -145,12 +148,7 @@ function showHistory(){
       <h4>Día #${index+1} - ${day.date}</h4>
       <table>
         <tr>
-          <th>#</th>
-          <th>Jugador</th>
-          <th>AB</th>
-          <th>H</th>
-          <th>HR</th>
-          <th>AVG</th>
+          <th>#</th><th>Jugador</th><th>AB</th><th>H</th><th>HR</th><th>AVG</th>
         </tr>
     `;
 
@@ -182,9 +180,7 @@ function ranking(){
   history.forEach(day=>{
     day.data.forEach(p=>{
       if(!p.name) return;
-
       if(!total[p.name]) total[p.name]={ab:0,h:0,hr:0};
-
       total[p.name].ab+=p.ab;
       total[p.name].h+=p.h;
       total[p.name].hr+=p.hr;
@@ -192,11 +188,7 @@ function ranking(){
   });
 
   let arr=Object.entries(total).map(([name,stats])=>{
-    return {
-      name,
-      ...stats,
-      avg: stats.ab?(stats.h/stats.ab).toFixed(3):"0.000"
-    }
+    return {name,...stats,avg: stats.ab?(stats.h/stats.ab).toFixed(3):"0.000"}
   });
 
   arr.sort((a,b)=>b.avg-a.avg);
@@ -217,16 +209,14 @@ function ranking(){
   document.getElementById("output").innerHTML=output;
 }
 
-// 🔥 LIDERES (RESTAURADO)
+// 🔥 LIDERES
 function updateLeaders(){
   let total={};
 
   history.forEach(day=>{
     day.data.forEach(p=>{
       if(!p.name) return;
-
       if(!total[p.name]) total[p.name]={ab:0,h:0,hr:0};
-
       total[p.name].ab+=p.ab;
       total[p.name].h+=p.h;
       total[p.name].hr+=p.hr;
@@ -235,20 +225,14 @@ function updateLeaders(){
 
   players.forEach(p=>{
     if(!p.name) return;
-
     if(!total[p.name]) total[p.name]={ab:0,h:0,hr:0};
-
     total[p.name].ab+=p.ab;
     total[p.name].h+=p.h;
     total[p.name].hr+=p.hr;
   });
 
   let arr=Object.entries(total).map(([name,stats])=>{
-    return {
-      name,
-      avg: stats.ab?(stats.h/stats.ab).toFixed(3):"0.000",
-      hr: stats.hr
-    }
+    return {name,avg: stats.ab?(stats.h/stats.ab).toFixed(3):"0.000",hr: stats.hr}
   });
 
   if(arr.length===0){
@@ -272,6 +256,27 @@ function newSeason(){
     localStorage.clear();
     location.reload();
   }
+}
+
+// 🔥 INSTALAR APP
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault();
+  deferredPrompt=e;
+});
+
+function installApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt=null;
+  }else{
+    alert("Instalación no disponible aún");
+  }
+}
+
+// 🔥 SERVICE WORKER
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
 }
 
 createPlayers();
