@@ -66,9 +66,9 @@ input {
   <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
 
   <div>
-    <button class="admin-only" onclick="saveDay()">Guardar día</button>
+    <button onclick="saveDay()">Guardar día</button>
     <button onclick="showRanking()">Ranking</button>
-    <button class="admin-only" onclick="newSeason()">Nueva temporada</button>
+    <button onclick="newSeason()">Nueva temporada</button>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
@@ -115,7 +115,7 @@ onAuthStateChanged(auth, async (u)=>{
 
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
- document.getElementById("app").style.display="none"; // 🔥 FIX
+ document.getElementById("app").style.display="none";
 
  isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
 
@@ -124,21 +124,24 @@ onAuthStateChanged(auth, async (u)=>{
 
 // AUTH
 window.login = async ()=>{
- if(!email.value.includes("@")) return alert("Email inválido");
  try{
    await signInWithEmailAndPassword(auth,email.value,password.value);
  }catch(e){ alert(e.message); }
 }
 
 window.register = async ()=>{
- if(!email.value.includes("@")) return alert("Email inválido");
  try{
    await createUserWithEmailAndPassword(auth,email.value,password.value);
  }catch(e){ alert(e.message); }
 }
 
-window.guestLogin = ()=>signInAnonymously(auth);
-window.logout = ()=>{ signOut(auth); location.reload(); }
+window.guestLogin = async ()=>{
+ await signInAnonymously(auth);
+}
+
+window.logout = ()=>{
+ signOut(auth);
+}
 
 // ---------------------
 // EQUIPOS
@@ -198,8 +201,16 @@ async function loadPlayers(){
  const container = document.getElementById("players");
  container.innerHTML="";
 
+ let topHR = 0;
+ let leaderName = "";
+
  snap.forEach(docSnap=>{
    const p = docSnap.data();
+
+   if(p.hr > topHR){
+     topHR = p.hr;
+     leaderName = p.nombre;
+   }
 
    container.innerHTML += `
    <div class="player">
@@ -214,6 +225,9 @@ async function loadPlayers(){
    </div>
    `;
  });
+
+ document.getElementById("leader").innerText =
+   "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
 // ---------------------
