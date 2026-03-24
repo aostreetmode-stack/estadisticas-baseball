@@ -2,49 +2,27 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estadísticas Softball</title>
+<title>Softball Stats Pro</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
-body{
- font-family: Arial;
- background:#1e2a38;
- color:white;
- text-align:center;
-}
-
-button{
- padding:10px;
- margin:5px;
- border:none;
- border-radius:10px;
-}
-
-input{
- padding:10px;
- margin:5px;
- border-radius:10px;
- border:none;
-}
-
-.card{
- background:#2f3e52;
- margin:10px;
- padding:10px;
- border-radius:10px;
-}
+body {font-family:Arial;background:#1f2c3a;color:white;text-align:center;}
+button{padding:10px;margin:5px;border:none;border-radius:10px;}
+.player{background:#2f3e52;margin:10px;padding:10px;border-radius:10px;}
+.card{background:#2f3e52;margin:10px;padding:10px;border-radius:10px;}
 </style>
-
 </head>
+
 <body>
 
-<h1>⚾ Estadísticas Softball</h1>
+<h1>⚾ Softball Stats</h1>
 
 <div id="login">
-<input id="email" placeholder="Correo">
-<input id="password" type="password" placeholder="Contraseña">
-
-<br>
+<input id="email" placeholder="Correo"><br>
+<input id="password" type="password" placeholder="Contraseña"><br>
 <button onclick="login()">Entrar</button>
 <button onclick="register()">Crear cuenta</button>
 <button onclick="guest()">Invitado</button>
@@ -52,312 +30,239 @@ input{
 
 <div id="equipos" style="display:none">
 <h2>Equipos</h2>
-
 <button onclick="rankingGlobal()">🏆 Ranking Global</button>
 <button onclick="crearEquipo()">+ Crear equipo</button>
-
 <div id="listaEquipos"></div>
 </div>
 
 <div id="app" style="display:none">
+<h2 id="teamName"></h2>
 
-<h2 id="nombreEquipo"></h2>
+<button onclick="addPlayer()">+ Jugador</button><br>
+<button onclick="saveDay()">Guardar día</button>
+<button onclick="showHistory()">Historial</button>
+<button onclick="showRanking()">Ranking</button>
+<button onclick="newSeason()">Nueva temporada</button>
+<button onclick="logout()">Salir</button>
 
-<button onclick="agregarJugador()">+ Agregar jugador</button>
-
-<br>
-<button onclick="guardarDia()">Guardar día</button>
-<button onclick="verHistorial()">Historial</button>
-<button onclick="verRanking()">Ranking</button>
-<button onclick="nuevaTemp()">Nueva temporada</button>
-<button onclick="cerrar()">Cerrar sesión</button>
-
-<div id="jugadores"></div>
-
+<div id="players"></div>
 </div>
 
-<button onclick="instalarApp()">📲 Instalar App</button>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
- getFirestore, collection, addDoc, getDocs,
- doc, deleteDoc, updateDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import {
- getAuth, signInWithEmailAndPassword,
- createUserWithEmailAndPassword,
- signInAnonymously
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+<script>
 
 const firebaseConfig = {
- apiKey: "TU_API_KEY",
- authDomain: "TU_AUTH",
- projectId: "TU_PROJECT"
+ apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
+ authDomain: "softball-stats-44e46.firebaseapp.com",
+ projectId: "softball-stats-44e46"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+firebase.initializeApp(firebaseConfig);
 
-let teamId=null;
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// LOGIN
-window.login = async ()=>{
- let e=document.getElementById("email").value;
- let p=document.getElementById("password").value;
- await signInWithEmailAndPassword(auth,e,p);
- cargarEquipos();
-};
+let user, teamId;
 
-window.register = async ()=>{
- let e=document.getElementById("email").value;
- let p=document.getElementById("password").value;
- await createUserWithEmailAndPassword(auth,e,p);
- cargarEquipos();
-};
+// AUTH
+function login(){
+ auth.signInWithEmailAndPassword(email.value,password.value);
+}
 
-window.guest = async ()=>{
- await signInAnonymously(auth);
- cargarEquipos();
-};
+function register(){
+ auth.createUserWithEmailAndPassword(email.value,password.value);
+}
 
-// EQUIPOS
-async function cargarEquipos(){
+function guest(){
+ auth.signInAnonymously();
+}
+
+function logout(){
+ location.reload();
+}
+
+auth.onAuthStateChanged(u=>{
+ if(!u) return;
+ user=u;
  document.getElementById("login").style.display="none";
  document.getElementById("equipos").style.display="block";
+ loadTeams();
+});
 
+// EQUIPOS
+async function loadTeams(){
  const cont=document.getElementById("listaEquipos");
  cont.innerHTML="";
 
- const snap=await getDocs(collection(db,"equipos"));
+ const snap=await db.collection("equipos").get();
 
  snap.forEach(d=>{
-  const div=document.createElement("div");
-  div.className="card";
+  let e=d.data();
 
-  div.innerHTML=`
-  ${d.data().nombre}
-  <br>
-  <button onclick="entrarEquipo('${d.id}','${d.data().nombre}')">Entrar</button>
-  <button onclick="eliminarEquipo('${d.id}')">❌ Eliminar</button>
-  `;
-
-  cont.appendChild(div);
+  cont.innerHTML+=`
+  <div class="card">
+  ${e.nombre}<br>
+  <button onclick="enterTeam('${d.id}','${e.nombre}')">Entrar</button>
+  <button onclick="deleteTeam('${d.id}')">❌</button>
+  </div>`;
  });
 }
 
-window.crearEquipo = async ()=>{
+async function crearEquipo(){
  let nombre=prompt("Nombre equipo");
- if(!nombre)return;
+ if(!nombre) return;
 
- await addDoc(collection(db,"equipos"),{nombre});
- cargarEquipos();
-};
+ await db.collection("equipos").add({nombre});
+ loadTeams();
+}
 
-window.eliminarEquipo = async(id)=>{
- await deleteDoc(doc(db,"equipos",id));
- cargarEquipos();
-};
+async function deleteTeam(id){
+ if(!confirm("Eliminar equipo?")) return;
+ await db.collection("equipos").doc(id).delete();
+ loadTeams();
+}
 
-window.entrarEquipo = (id,nombre)=>{
+function enterTeam(id,name){
  teamId=id;
-
  document.getElementById("equipos").style.display="none";
  document.getElementById("app").style.display="block";
-
- document.getElementById("nombreEquipo").innerText=nombre;
-
- cargarJugadores();
-};
+ document.getElementById("teamName").innerText=name;
+ loadPlayers();
+}
 
 // JUGADORES
-async function cargarJugadores(){
- const cont=document.getElementById("jugadores");
+async function loadPlayers(){
+ const cont=document.getElementById("players");
  cont.innerHTML="";
 
- const snap=await getDocs(collection(db,"equipos",teamId,"jugadores"));
+ const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
  snap.forEach(d=>{
-  const p=d.data();
+  let p=d.data();
 
-  const div=document.createElement("div");
-  div.className="card";
-
-  div.innerHTML=`
-  ${p.nombre}
-  <br>
-  AB:${p.ab} H:${p.h} HR:${p.hr}
-  <br>
-  <button onclick="out('${d.id}',${p.ab},${p.h},${p.hr})">OUT</button>
-  <button onclick="hit('${d.id}',${p.ab},${p.h},${p.hr})">HIT</button>
-  <button onclick="hr('${d.id}',${p.ab},${p.h},${p.hr})">HR</button>
-  <button onclick="borrarJugador('${d.id}')">X</button>
-  `;
-
-  cont.appendChild(div);
+  cont.innerHTML+=`
+  <div class="player">
+  ${p.nombre}<br>
+  AB:${p.ab} H:${p.h} HR:${p.hr}<br>
+  <button onclick="update('${d.id}','out')">OUT</button>
+  <button onclick="update('${d.id}','hit')">HIT</button>
+  <button onclick="update('${d.id}','hr')">HR</button>
+  </div>`;
  });
 }
 
-window.agregarJugador = async ()=>{
- let nombre=prompt("Nombre");
- if(!nombre)return;
+async function addPlayer(){
+ let name=prompt("Nombre");
+ if(!name) return;
 
- await addDoc(collection(db,"equipos",teamId,"jugadores"),{
-  nombre,ab:0,h:0,hr:0
+ await db.collection("equipos").doc(teamId).collection("jugadores").add({
+  nombre:name,ab:0,h:0,hr:0
  });
 
- cargarJugadores();
-};
+ loadPlayers();
+}
 
-window.borrarJugador = async(id)=>{
- await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
- cargarJugadores();
-};
+async function update(id,type){
+ let ref=db.collection("equipos").doc(teamId).collection("jugadores").doc(id);
+ let docu=await ref.get();
+ let p=docu.data();
 
-window.out = async(id,ab,h,hr)=>{
- await updateDoc(doc(db,"equipos",teamId,"jugadores",id),{
-  ab:ab+1
- });
- cargarJugadores();
-};
+ if(type=="out") p.ab++;
+ if(type=="hit"){p.ab++;p.h++;}
+ if(type=="hr"){p.ab++;p.h++;p.hr++;}
 
-window.hit = async(id,ab,h,hr)=>{
- await updateDoc(doc(db,"equipos",teamId,"jugadores",id),{
-  ab:ab+1,h:h+1
- });
- cargarJugadores();
-};
+ await ref.update(p);
+ loadPlayers();
+}
 
-window.hr = async(id,ab,h,hr)=>{
- await updateDoc(doc(db,"equipos",teamId,"jugadores",id),{
-  ab:ab+1,h:h+1,hr:hr+1
- });
- cargarJugadores();
-};
-
-// GUARDAR DIA
-window.guardarDia = async ()=>{
- const snap=await getDocs(collection(db,"equipos",teamId,"jugadores"));
+// HISTORIAL
+async function saveDay(){
+ let snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
  let jugadores=[];
+ snap.forEach(d=>jugadores.push(d.data()));
 
- snap.forEach(d=>{
-  jugadores.push(d.data());
- });
-
- await addDoc(collection(db,"equipos",teamId,"historial"),{
+ await db.collection("equipos").doc(teamId).collection("historial").add({
   fecha:new Date().toLocaleString(),
   jugadores
  });
 
- alert("Guardado 🔥");
-};
+ alert("Guardado");
+}
 
-// HISTORIAL REAL
-window.verHistorial = async ()=>{
- const snap=await getDocs(collection(db,"equipos",teamId,"historial"));
+async function showHistory(){
+ let snap=await db.collection("equipos").doc(teamId).collection("historial").get();
 
- let texto="📅 HISTORIAL\n\n";
+ let txt="HISTORIAL\n\n";
 
  snap.forEach(d=>{
   let dia=d.data();
-
-  texto+=dia.fecha+"\n";
-
+  txt+=dia.fecha+"\n";
   dia.jugadores.forEach(p=>{
-   texto+=`${p.nombre} H:${p.h} HR:${p.hr}\n`;
+   txt+=`${p.nombre} H:${p.h} HR:${p.hr}\n`;
   });
-
-  texto+="----------------\n";
+  txt+="------\n";
  });
 
- alert(texto);
-};
+ alert(txt);
+}
 
-// RANKING EQUIPO
-window.verRanking = async ()=>{
- const snap=await getDocs(collection(db,"equipos",teamId,"jugadores"));
+// RANKING
+async function showRanking(){
+ let snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
  let arr=[];
-
  snap.forEach(d=>{
   let p=d.data();
-  let avg=p.ab>0?(p.h/p.ab):0;
+  let avg=p.ab? p.h/p.ab:0;
   arr.push({nombre:p.nombre,avg});
  });
 
  arr.sort((a,b)=>b.avg-a.avg);
 
- let texto="🏆 Ranking\n\n";
-
- arr.forEach((j,i)=>{
-  texto+=`${i+1}. ${j.nombre} ${j.avg.toFixed(3)}\n`;
+ let txt="Ranking\n\n";
+ arr.forEach((p,i)=>{
+  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
  });
 
- alert(texto);
-};
+ alert(txt);
+}
 
-// GLOBAL
-window.rankingGlobal = async ()=>{
- const equipos=await getDocs(collection(db,"equipos"));
-
+async function rankingGlobal(){
+ let equipos=await db.collection("equipos").get();
  let arr=[];
 
  for(const e of equipos.docs){
-  const jugadores=await getDocs(collection(db,"equipos",e.id,"jugadores"));
-
+  let jugadores=await db.collection("equipos").doc(e.id).collection("jugadores").get();
   jugadores.forEach(j=>{
    let p=j.data();
-   let avg=p.ab>0?(p.h/p.ab):0;
-
+   let avg=p.ab? p.h/p.ab:0;
    arr.push({nombre:p.nombre,avg});
   });
  }
 
  arr.sort((a,b)=>b.avg-a.avg);
 
- let texto="🌎 GLOBAL\n\n";
-
- arr.slice(0,10).forEach((j,i)=>{
-  texto+=`${i+1}. ${j.nombre} ${j.avg.toFixed(3)}\n`;
+ let txt="GLOBAL\n\n";
+ arr.slice(0,10).forEach((p,i)=>{
+  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
  });
 
- alert(texto);
-};
+ alert(txt);
+}
 
-window.nuevaTemp = async ()=>{
- const snap=await getDocs(collection(db,"equipos",teamId,"jugadores"));
+// NUEVA TEMP
+async function newSeason(){
+ let snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
 
- snap.forEach(async d=>{
-  await updateDoc(doc(db,"equipos",teamId,"jugadores",d.id),{
-   ab:0,h:0,hr:0
-  });
+ snap.forEach(d=>{
+  db.collection("equipos").doc(teamId).collection("jugadores").doc(d.id)
+  .update({ab:0,h:0,hr:0});
  });
 
- cargarJugadores();
-};
-
-window.cerrar = ()=>{
- location.reload();
-};
-
-// PWA
-let deferredPrompt;
-
-window.addEventListener("beforeinstallprompt",(e)=>{
- e.preventDefault();
- deferredPrompt=e;
-});
-
-window.instalarApp = ()=>{
- if(deferredPrompt){
-  deferredPrompt.prompt();
- }
-};
+ loadPlayers();
+}
 
 </script>
+
 </body>
 </html>
