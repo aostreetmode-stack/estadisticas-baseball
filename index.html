@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Softball Stats Pro</title>
 
 <style>
@@ -36,16 +35,12 @@ button{
   border:none;
   border-radius:10px;
   margin:5px;
-  font-size:16px;
 }
 
 .out{background:red;color:white;}
 .hit{background:#ccc;}
 .hr{background:green;color:white;}
-.delete{
-  background:red;
-  float:right;
-}
+.delete{background:red; float:right;}
 
 .top{
   background:#2f3c4f;
@@ -53,31 +48,29 @@ button{
   border-radius:15px;
   margin:10px;
 }
-
-#loginScreen{padding:20px;}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
   <h1>Login</h1>
-  <input id="email" placeholder="Email">
-  <br><br>
-  <input id="password" type="password" placeholder="Password">
-  <br><br>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
   <button onclick="login()">Entrar</button>
   <button onclick="register()">Crear cuenta</button>
   <button onclick="guest()">Invitado</button>
 </div>
 
-<!-- APP -->
 <div id="appScreen" style="display:none">
 
 <h1>⚾ Estadísticas Softball</h1>
 
 <div class="top" id="lideres"></div>
+
+<div style="text-align:center;">
+  <button onclick="add()">➕ Agregar jugador</button>
+</div>
 
 <div id="players"></div>
 
@@ -126,9 +119,7 @@ window.register = () => {
   .catch(e=>alert(e.message));
 };
 
-window.guest = () => {
-  signInAnonymously(auth);
-};
+window.guest = () => signInAnonymously(auth);
 
 window.logout = () => signOut(auth);
 
@@ -146,14 +137,20 @@ onAuthStateChanged(auth,user=>{
 
 <script>
 
-let players = JSON.parse(localStorage.getItem("players")) || [];
+let players = JSON.parse(localStorage.getItem("players"));
+
+if(!players){
+  players=[];
+  for(let i=0;i<12;i++){
+    players.push({name:"Jugador "+(i+1),ab:0,h:0,hr:0,locked:false});
+  }
+}
 
 function save(){localStorage.setItem("players",JSON.stringify(players));}
 
 function render(){
   let html="";
   players.forEach((p,i)=>{
-
     html+=`
     <div class="card">
 
@@ -184,7 +181,7 @@ function lock(i,name){
 }
 
 function add(){
-  players.push({name:"Jugador",ab:0,h:0,hr:0,locked:false});
+  players.push({name:"Jugador "+(players.length+1),ab:0,h:0,hr:0,locked:false});
   save();render();
 }
 
@@ -197,10 +194,9 @@ function out(i){players[i].ab++;save();render();}
 function hit(i){players[i].ab++;players[i].h++;save();render();}
 function hr(i){players[i].ab++;players[i].h++;players[i].hr++;save();render();}
 
-function calc(p){return p.ab? (p.h/p.ab).toFixed(3):"0.000";}
+function calc(p){return p.ab?(p.h/p.ab).toFixed(3):"0.000";}
 
 function lideres(){
-  if(players.length===0){lideresDiv.innerHTML="No hay datos";return;}
   let avg=players.reduce((a,b)=> calc(b)>calc(a)?b:a);
   let hr=players.reduce((a,b)=> b.hr>a.hr?b:a);
   lideresDiv.innerHTML=`🏆 AVG líder: ${avg.name} (${calc(avg)})<br>💣 HR líder: ${hr.name} (${hr.hr})`;
