@@ -13,7 +13,6 @@ body {
   text-align:center;
   margin:0;
 }
-
 button {
   padding:10px;
   margin:5px;
@@ -21,17 +20,13 @@ button {
   border-radius:10px;
   font-weight:bold;
 }
-
 .admin-only { background:#2563eb; color:white; }
-.guest { background:#6b7280; color:white; }
-
 .player {
   background:#2f3e52;
   margin:10px;
   padding:10px;
   border-radius:15px;
 }
-
 input {
   padding:8px;
   border-radius:10px;
@@ -39,7 +34,6 @@ input {
   width:80%;
   max-width:300px;
 }
-
 .out { background:red; }
 .hit { background:gray; }
 .hr { background:green; }
@@ -69,7 +63,6 @@ input {
 
 <!-- APP -->
 <div id="app" style="display:none;">
-
   <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
 
   <div>
@@ -80,9 +73,7 @@ input {
   </div>
 
   <h3 id="leader"></h3>
-
   <div id="players"></div>
-
 </div>
 
 <script type="module">
@@ -124,6 +115,7 @@ onAuthStateChanged(auth, async (u)=>{
 
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
+ document.getElementById("app").style.display="none"; // 🔥 FIX
 
  isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
 
@@ -131,13 +123,25 @@ onAuthStateChanged(auth, async (u)=>{
 });
 
 // AUTH
-window.login = ()=>signInWithEmailAndPassword(auth,email.value,password.value);
-window.register = ()=>createUserWithEmailAndPassword(auth,email.value,password.value);
+window.login = async ()=>{
+ if(!email.value.includes("@")) return alert("Email inválido");
+ try{
+   await signInWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){ alert(e.message); }
+}
+
+window.register = async ()=>{
+ if(!email.value.includes("@")) return alert("Email inválido");
+ try{
+   await createUserWithEmailAndPassword(auth,email.value,password.value);
+ }catch(e){ alert(e.message); }
+}
+
 window.guestLogin = ()=>signInAnonymously(auth);
 window.logout = ()=>{ signOut(auth); location.reload(); }
 
 // ---------------------
-// 🧢 EQUIPOS
+// EQUIPOS
 // ---------------------
 
 async function loadEquipos(){
@@ -172,12 +176,11 @@ window.crearEquipo = async ()=>{
 }
 
 // ---------------------
-// 🎯 ENTRAR EQUIPO
+// ENTRAR EQUIPO
 // ---------------------
 
 window.entrarEquipo = (id, adminEmail)=>{
  teamId = id;
-
  isAdminTeam = (user.email === adminEmail);
 
  document.getElementById("teams").style.display="none";
@@ -187,7 +190,7 @@ window.entrarEquipo = (id, adminEmail)=>{
 }
 
 // ---------------------
-// 👥 JUGADORES
+// JUGADORES
 // ---------------------
 
 async function loadPlayers(){
@@ -195,16 +198,8 @@ async function loadPlayers(){
  const container = document.getElementById("players");
  container.innerHTML="";
 
- let topHR = 0;
- let leaderName = "";
-
  snap.forEach(docSnap=>{
    const p = docSnap.data();
-
-   if(p.hr > topHR){
-     topHR = p.hr;
-     leaderName = p.nombre;
-   }
 
    container.innerHTML += `
    <div class="player">
@@ -219,13 +214,10 @@ async function loadPlayers(){
    </div>
    `;
  });
-
- document.getElementById("leader").innerText =
-   "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
 // ---------------------
-// ➕ AGREGAR
+// RESTO IGUAL
 // ---------------------
 
 window.addPlayer = async ()=>{
@@ -240,10 +232,6 @@ window.addPlayer = async ()=>{
 
  loadPlayers();
 }
-
-// ---------------------
-// ⚾ UPDATE
-// ---------------------
 
 window.update = async (id,type)=>{
  const ref = doc(db,"equipos",teamId,"jugadores",id);
@@ -262,19 +250,11 @@ window.update = async (id,type)=>{
  loadPlayers();
 }
 
-// ---------------------
-// ❌ ELIMINAR
-// ---------------------
-
 window.removePlayer = async (id)=>{
  if(!(isAdminTeam || isAdminGlobal)) return;
  await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
  loadPlayers();
 }
-
-// ---------------------
-// 🔄 NUEVA TEMPORADA
-// ---------------------
 
 window.newSeason = async ()=>{
  if(!(isAdminTeam || isAdminGlobal)) return;
@@ -290,16 +270,8 @@ window.newSeason = async ()=>{
  loadPlayers();
 }
 
-// ---------------------
-// EXTRA
-// ---------------------
-
 window.saveDay = ()=>alert("Guardado 🔥");
-
-window.showRanking = ()=>{
- if(!isAdminGlobal) return alert("Solo admin global");
- alert("Ranking global próximamente 🔥");
-}
+window.showRanking = ()=>alert("Ranking 🔥");
 
 </script>
 
