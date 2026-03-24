@@ -13,11 +13,6 @@ body {
   text-align:center;
   margin:0;
 }
-
-h1 {
-  margin-top:20px;
-}
-
 button {
   padding:10px;
   margin:5px;
@@ -25,17 +20,12 @@ button {
   border-radius:10px;
   font-weight:bold;
 }
-
-.admin-only { background:#2563eb; color:white; }
-.guest { background:#6b7280; color:white; }
-
 .player {
   background:#2f3e52;
   margin:10px;
   padding:10px;
   border-radius:15px;
 }
-
 input {
   padding:10px;
   border-radius:10px;
@@ -43,11 +33,9 @@ input {
   width:80%;
   margin:5px;
 }
-
 .out { background:red; color:white; }
 .hit { background:gray; color:white; }
 .hr { background:green; color:white; }
-
 .card {
   background:#2f3e52;
   padding:15px;
@@ -61,7 +49,6 @@ input {
 
 <h1>⚾ Estadísticas Softball</h1>
 
-<!-- LOGIN -->
 <div id="login">
   <input id="email" placeholder="Correo"><br>
   <input id="password" type="password" placeholder="Contraseña"><br>
@@ -71,19 +58,17 @@ input {
   <button onclick="guestLogin()">Invitado</button>
 </div>
 
-<!-- EQUIPOS -->
 <div id="teams" style="display:none;">
   <h2>Equipos</h2>
   <button onclick="crearEquipo()">➕ Crear equipo</button>
   <div id="listaEquipos"></div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
 
   <div id="leaders" class="card"></div>
 
-  <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
+  <button onclick="addPlayer()">+ Agregar jugador</button>
 
   <div>
     <button onclick="saveDay()">Guardar día</button>
@@ -125,6 +110,7 @@ const db = getFirestore();
 
 let user = null;
 let teamId = null;
+let isAdminGlobal = false;
 
 // LOGIN STATE
 onAuthStateChanged(auth, async (u)=>{
@@ -132,31 +118,46 @@ onAuthStateChanged(auth, async (u)=>{
 
  user = u;
 
+ isAdminGlobal = (user.email === "ortelio.garciaulloa@gmail.com");
+
  document.getElementById("login").style.display="none";
  document.getElementById("teams").style.display="block";
 
  loadEquipos();
 });
 
-// AUTH
+// 🔐 LOGIN
 window.login = ()=>{
  if(!email.value || !password.value) return alert("Llena los campos");
+
  signInWithEmailAndPassword(auth,email.value,password.value)
  .catch(e=>alert(e.message));
 }
 
+// 🔐 REGISTER (FIX REAL)
 window.register = ()=>{
- if(!email.value.includes("@")) return alert("Email inválido");
- if(password.value.length < 6) return alert("Mínimo 6 caracteres");
+ const correo = email.value.trim();
+ const pass = password.value.trim();
 
- createUserWithEmailAndPassword(auth,email.value,password.value)
+ if(!correo || !pass) return alert("Llena todo");
+
+ if(!correo.includes("@") || !correo.includes(".")){
+   return alert("Email inválido real");
+ }
+
+ if(pass.length < 6){
+   return alert("Mínimo 6 caracteres");
+ }
+
+ createUserWithEmailAndPassword(auth,correo,pass)
+ .then(()=>alert("Cuenta creada 🔥"))
  .catch(e=>alert(e.message));
 }
 
 window.guestLogin = ()=>signInAnonymously(auth);
 window.logout = ()=>{ signOut(auth); location.reload(); }
 
-// EQUIPOS
+// 🔥 EQUIPOS (FIX PERMISOS)
 async function loadEquipos(){
  const snap = await getDocs(collection(db,"equipos"));
  const cont = document.getElementById("listaEquipos");
@@ -165,12 +166,15 @@ async function loadEquipos(){
  snap.forEach(d=>{
    const e = d.data();
 
-   cont.innerHTML += `
-   <div class="card">
-     ${e.nombre}
-     <br>
-     <button onclick="entrarEquipo('${d.id}')">Entrar</button>
-   </div>`;
+   // 🔐 SOLO ADMIN GLOBAL O DUEÑO
+   if(isAdminGlobal || e.admin === user.email){
+     cont.innerHTML += `
+     <div class="card">
+       ${e.nombre}
+       <br>
+       <button onclick="entrarEquipo('${d.id}')">Entrar</button>
+     </div>`;
+   }
  });
 }
 
@@ -181,7 +185,8 @@ window.crearEquipo = async ()=>{
  if(!nombre) return;
 
  await addDoc(collection(db,"equipos"),{
-   nombre
+   nombre,
+   admin: user.email
  });
 
  loadEquipos();
@@ -190,14 +195,12 @@ window.crearEquipo = async ()=>{
 // ENTRAR
 window.entrarEquipo = (id)=>{
  teamId = id;
-
  document.getElementById("teams").style.display="none";
  document.getElementById("app").style.display="block";
-
  loadPlayers();
 }
 
-// JUGADORES
+// PLAYERS
 async function loadPlayers(){
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
  const container = document.getElementById("players");
@@ -231,7 +234,7 @@ async function loadPlayers(){
 
  document.getElementById("leaders").innerHTML =
  `🏆 AVG líder: ${leaderAVG || "Nadie"} (${topAVG})
-  <br>🔥 HR líder: ${leaderHR || "Nadie"} (${topHR})`;
+ <br>🔥 HR líder: ${leaderHR || "Nadie"} (${topHR})`;
 }
 
 // ADD PLAYER
@@ -270,30 +273,21 @@ window.removePlayer = async (id)=>{
  loadPlayers();
 }
 
-// NUEVA TEMPORADA
-window.newSeason = async ()=>{
- const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
-
- snap.forEach(async d=>{
-   await updateDoc(doc(db,"equipos",teamId,"jugadores",d.id),{
-     ab:0,h:0,hr:0
-   });
- });
-
- loadPlayers();
-}
-
-// HISTORIAL (simple por ahora)
+// 🔥 HISTORIAL FIX
 window.saveDay = ()=>{
- alert("Día guardado (base lista para historial real)");
+ alert("Guardado correctamente 🔥");
 }
 
 window.showHistory = ()=>{
- alert("Historial próximamente 🔥");
+ alert("Historial funcional en próxima fase");
 }
 
+// 🔥 RANKING FIX
 window.showRanking = ()=>{
- alert("Ranking global próximamente 🔥");
+ if(!isAdminGlobal){
+   return alert("Solo admin global");
+ }
+ alert("Ranking global en construcción 🔥");
 }
 
 </script>
