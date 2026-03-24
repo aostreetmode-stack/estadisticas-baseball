@@ -8,49 +8,82 @@
 <style>
 body{margin:0;font-family:Arial;background:#1f2937;color:white;}
 .container{padding:15px;}
+
 .player{background:#374151;padding:12px;border-radius:12px;margin-bottom:12px;position:relative;}
 input{width:100%;padding:10px;border-radius:8px;border:none;margin-bottom:10px;}
 .row{display:flex;gap:10px;}
 button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:bold;}
+
 .out{background:#ef4444;}
 .hit{background:#d1d5db;color:black;}
 .hr{background:#22c55e;}
+
 .delete{
-  position:absolute;
-  right:10px;
-  top:10px;
-  background:#ef4444;
-  color:white;
-  width:40px;
-  height:40px;
-  border-radius:10px;
+position:absolute;right:10px;top:10px;
+background:#ef4444;color:white;
+width:40px;height:40px;border-radius:10px;
 }
-.card{background:#374151;padding:12px;border-radius:12px;margin-top:15px;}
+
+.card{
+background:#374151;
+padding:12px;
+border-radius:12px;
+margin-top:15px;
+}
+
 .hidden{display:none;}
+.locked{background:#9ca3af;}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th{
+background:#111827;
+padding:8px;
+}
+
+td{
+padding:8px;
+border-bottom:1px solid #555;
+text-align:center;
+}
+
+.rank1{color:gold;font-weight:bold;}
+.rank2{color:silver;}
+.rank3{color:#cd7f32;}
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <div id="loginBox">
-  <h2>Login</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button onclick="login()">Entrar</button>
-  <button onclick="register()">Crear cuenta</button>
-  <button onclick="guest()">Invitado</button>
+<h2>Login</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Entrar</button>
+<button onclick="register()">Crear cuenta</button>
+<button onclick="guest()">Invitado</button>
 </div>
 
 <div id="appBox" class="hidden">
 
-<div id="leaders" class="card">🔥 Líderes</div>
+<div id="leaders" class="card"></div>
+
 <div id="players"></div>
 
 <div class="card">
-  <button onclick="newSeason()">Nueva temporada</button>
+<button onclick="saveDay()">Guardar día</button>
+<button onclick="newSeason()">Nueva temporada</button>
+<button onclick="toggleHistory()">Historial</button>
+<button onclick="showRanking()">Ranking</button>
 </div>
+
+<div id="historyBox" class="card hidden"></div>
+<div id="rankingBox" class="card hidden"></div>
 
 <button onclick="logout()">Cerrar sesión</button>
 
@@ -64,12 +97,12 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, si
 import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
-  authDomain: "softball-stats-44e46.firebaseapp.com",
-  projectId: "softball-stats-44e46",
-  storageBucket: "softball-stats-44e46.firebasestorage.app",
-  messagingSenderId: "239247616602",
-  appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
+apiKey: "AIzaSyCDF4...",
+authDomain: "softball-stats-44e46.firebaseapp.com",
+projectId: "softball-stats-44e46",
+storageBucket: "softball-stats-44e46.appspot.com",
+messagingSenderId: "239247616602",
+appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -77,8 +110,8 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 let players=[];
+let history=[];
 let uid="";
-let role="guest";
 
 window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value);
 window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value);
@@ -86,142 +119,189 @@ window.guest=()=>signInAnonymously(auth);
 window.logout=()=>signOut(auth);
 
 onAuthStateChanged(auth, async (user)=>{
-  if(user){
-    uid=user.uid;
+if(user){
+uid=user.uid;
+loginBox.classList.add("hidden");
+appBox.classList.remove("hidden");
 
-    loginBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
+await loadData();
+createPlayers();
 
-    role = user.email==="ortelio.garciaulloa@gmail.com" ? "admin" : "user";
-
-    await loadData();
-    createPlayers();
-
-  }else{
-    loginBox.classList.remove("hidden");
-    appBox.classList.add("hidden");
-  }
+}else{
+loginBox.classList.remove("hidden");
+appBox.classList.add("hidden");
+}
 });
 
 async function loadData(){
-  let snap=await get(ref(db,"users/"+uid+"/players"));
-  if(snap.exists()){
-    players=snap.val();
-  }
+let p=await get(ref(db,"users/"+uid+"/players"));
+let h=await get(ref(db,"users/"+uid+"/history"));
+
+if(p.exists()) players=p.val();
+if(h.exists()) history=h.val();
 }
 
-function saveData(){
-  set(ref(db,"users/"+uid+"/players"),players);
+function saveAll(){
+set(ref(db,"users/"+uid+"/players"),players);
+set(ref(db,"users/"+uid+"/history"),history);
 }
 
 function createPlayers(){
-  let c=document.getElementById("players");
-  c.innerHTML="";
+let c=document.getElementById("players");
+c.innerHTML="";
 
-  if(players.length===0){
-    for(let i=0;i<9;i++){
-      players.push({name:"",ab:0,h:0,hr:0});
-    }
-  }
-
-  players.forEach((p,i)=>{
-
-    let locked = p.ab > 0;
-
-    let div=document.createElement("div");
-    div.className="player";
-
-    div.innerHTML=`
-
-      ${role==="admin" ? `<button class="delete" onclick="deletePlayer(${i})">X</button>` : ""}
-
-      <input 
-        value="${p.name}" 
-        ${locked ? "disabled" : ""}
-        placeholder="Jugador ${i+1}"
-        onchange="updateName(${i},this.value)">
-
-      <div id="stats${i}"></div>
-
-      <div class="row">
-        <button class="out" onclick="update(${i},'out')">OUT</button>
-        <button class="hit" onclick="update(${i},'hit')">HIT</button>
-        <button class="hr" onclick="update(${i},'hr')">HR</button>
-      </div>
-    `;
-
-    c.appendChild(div);
-  });
-
-  render();
-  updateLeaders();
+if(players.length===0){
+for(let i=0;i<9;i++){
+players.push({name:"",ab:0,h:0,hr:0,locked:false});
+}
 }
 
-window.updateName=(i,v)=>{
-  if(players[i].ab>0) return; // 🔒 NO CAMBIAR NOMBRE
-  players[i].name=v;
-  saveData();
+players.forEach((p,i)=>{
+
+let div=document.createElement("div");
+div.className="player";
+
+div.innerHTML=`
+<button class="delete" onclick="deletePlayer(${i})">X</button>
+
+<input value="${p.name}" ${p.locked?"disabled class='locked'":""}
+placeholder="Jugador ${i+1}"
+onblur="lockName(${i},this.value)">
+
+<div id="stats${i}"></div>
+
+<div class="row">
+<button class="out" onclick="update(${i},'out')">OUT</button>
+<button class="hit" onclick="update(${i},'hit')">HIT</button>
+<button class="hr" onclick="update(${i},'hr')">HR</button>
+</div>
+`;
+
+c.appendChild(div);
+});
+
+render();
+updateLeaders();
+}
+
+window.lockName=(i,v)=>{
+if(!v) return;
+players[i].name=v;
+players[i].locked=true;
+saveAll();
+createPlayers();
 };
 
 window.update=(i,t)=>{
-  players[i].ab++;
-  if(t==="hit") players[i].h++;
-  if(t==="hr"){players[i].h++;players[i].hr++;}
-  render();
-  updateLeaders();
-  saveData();
+players[i].ab++;
+if(t==="hit") players[i].h++;
+if(t==="hr"){players[i].h++;players[i].hr++;}
+render();
+updateLeaders();
+saveAll();
 };
 
-// ❌ ELIMINAR SIEMPRE (CON CONFIRMACIÓN)
 window.deletePlayer=(i)=>{
-  let ok = confirm("¿Eliminar este jugador? (aunque tenga estadísticas)");
-  if(!ok) return;
-
-  players[i]={name:"",ab:0,h:0,hr:0};
-
-  saveData();
-  createPlayers();
+players[i]={name:"",ab:0,h:0,hr:0,locked:false};
+saveAll();
+createPlayers();
 };
 
 function render(){
-  players.forEach((p,i)=>{
-    let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
-    document.getElementById("stats"+i).innerText=
-    `#${i+1} AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}`;
-  });
+players.forEach((p,i)=>{
+let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
+document.getElementById("stats"+i).innerText=
+`#${i+1} AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}`;
+});
 }
 
 function updateLeaders(){
-  let bestAvg=null;
-  let bestHR=null;
+let best=null;
 
-  players.forEach(p=>{
-    if(!p.name) return;
+players.forEach(p=>{
+if(!p.name) return;
+let avg=p.ab?(p.h/p.ab):0;
+if(!best || avg>best.avg){
+best={name:p.name,avg:avg.toFixed(3)};
+}
+});
 
-    let avg=p.ab?(p.h/p.ab):0;
-
-    if(!bestAvg || avg>bestAvg.avg){
-      bestAvg={name:p.name,avg:avg.toFixed(3)};
-    }
-
-    if(!bestHR || p.hr>bestHR.hr){
-      bestHR={name:p.name,hr:p.hr};
-    }
-  });
-
-  leaders.innerHTML=`
-    🏆 AVG líder: ${bestAvg?bestAvg.name+" ("+bestAvg.avg+")":"---"}<br>
-    💣 HR líder: ${bestHR?bestHR.name+" ("+bestHR.hr+")":"---"}
-  `;
+leaders.innerHTML=`🏆 AVG líder: ${best?best.name+" ("+best.avg+")":"---"}`;
 }
 
+// 💾 GUARDAR DÍA
+window.saveDay=()=>{
+let today=new Date().toLocaleString();
+
+history.push({
+date:today,
+players:JSON.parse(JSON.stringify(players))
+});
+
+saveAll();
+alert("Día guardado");
+};
+
+// 📊 HISTORIAL
+window.toggleHistory=()=>{
+historyBox.classList.toggle("hidden");
+
+let html="<table><tr><th>#</th><th>Fecha</th><th>Jugadores</th></tr>";
+
+history.forEach((d,i)=>{
+let names=d.players.map(p=>p.name).join(", ");
+html+=`<tr><td>${i+1}</td><td>${d.date}</td><td>${names}</td></tr>`;
+});
+
+html+="</table>";
+
+historyBox.innerHTML=html;
+};
+
+// 🏆 RANKING PRO
+window.showRanking=()=>{
+rankingBox.classList.toggle("hidden");
+
+let sorted=[...players].filter(p=>p.name).sort((a,b)=>{
+let avgA=a.ab?(a.h/a.ab):0;
+let avgB=b.ab?(b.h/b.ab):0;
+return avgB-avgA;
+});
+
+let html="<table><tr><th>#</th><th>Jugador</th><th>AVG</th><th>H</th><th>HR</th></tr>";
+
+sorted.forEach((p,i)=>{
+let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
+
+let cls="";
+if(i==0) cls="rank1";
+if(i==1) cls="rank2";
+if(i==2) cls="rank3";
+
+html+=`<tr class="${cls}">
+<td>${i+1}</td>
+<td>${p.name}</td>
+<td>${avg}</td>
+<td>${p.h}</td>
+<td>${p.hr}</td>
+</tr>`;
+});
+
+html+="</table>";
+
+rankingBox.innerHTML=html;
+};
+
+// 🔄 NUEVA TEMPORADA
 window.newSeason=()=>{
-  players.forEach(p=>{p.ab=0;p.h=0;p.hr=0;p.name=""});
-  saveData();
-  createPlayers();
+players.forEach(p=>{
+p.ab=0;p.h=0;p.hr=0;
+});
+saveAll();
+render();
+updateLeaders();
 };
 
 </script>
-
 </body>
 </html>
