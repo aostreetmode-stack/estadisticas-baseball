@@ -40,26 +40,15 @@ border-collapse:collapse;
 margin-top:10px;
 }
 
-th{
-background:#111827;
-padding:8px;
-}
-
-td{
-padding:8px;
-border-bottom:1px solid #555;
-text-align:center;
-}
-
-.rank1{color:gold;font-weight:bold;}
-.rank2{color:silver;}
-.rank3{color:#cd7f32;}
+th{background:#111827;padding:8px;}
+td{padding:8px;border-bottom:1px solid #555;text-align:center;}
 </style>
 </head>
 
 <body>
 <div class="container">
 
+<!-- LOGIN -->
 <div id="loginBox">
 <h2>Login</h2>
 <input id="email" placeholder="Email">
@@ -69,6 +58,7 @@ text-align:center;
 <button onclick="guest()">Invitado</button>
 </div>
 
+<!-- APP -->
 <div id="appBox" class="hidden">
 
 <div id="leaders" class="card"></div>
@@ -77,9 +67,9 @@ text-align:center;
 
 <div class="card">
 <button onclick="saveDay()">Guardar día</button>
-<button onclick="newSeason()">Nueva temporada</button>
 <button onclick="toggleHistory()">Historial</button>
 <button onclick="showRanking()">Ranking</button>
+<button onclick="newSeason()">Nueva temporada</button>
 </div>
 
 <div id="historyBox" class="card hidden"></div>
@@ -229,7 +219,7 @@ best={name:p.name,avg:avg.toFixed(3)};
 leaders.innerHTML=`🏆 AVG líder: ${best?best.name+" ("+best.avg+")":"---"}`;
 }
 
-// 💾 GUARDAR DÍA
+// GUARDAR DÍA
 window.saveDay=()=>{
 let today=new Date().toLocaleString();
 
@@ -239,10 +229,10 @@ players:JSON.parse(JSON.stringify(players))
 });
 
 saveAll();
-alert("Día guardado");
+alert("Guardado");
 };
 
-// 📊 HISTORIAL
+// HISTORIAL
 window.toggleHistory=()=>{
 historyBox.classList.toggle("hidden");
 
@@ -258,7 +248,7 @@ html+="</table>";
 historyBox.innerHTML=html;
 };
 
-// 🏆 RANKING PRO
+// RANKING
 window.showRanking=()=>{
 rankingBox.classList.toggle("hidden");
 
@@ -273,12 +263,7 @@ let html="<table><tr><th>#</th><th>Jugador</th><th>AVG</th><th>H</th><th>HR</th>
 sorted.forEach((p,i)=>{
 let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
 
-let cls="";
-if(i==0) cls="rank1";
-if(i==1) cls="rank2";
-if(i==2) cls="rank3";
-
-html+=`<tr class="${cls}">
+html+=`<tr>
 <td>${i+1}</td>
 <td>${p.name}</td>
 <td>${avg}</td>
@@ -292,7 +277,7 @@ html+="</table>";
 rankingBox.innerHTML=html;
 };
 
-// 🔄 NUEVA TEMPORADA
+// NUEVA TEMPORADA
 window.newSeason=()=>{
 players.forEach(p=>{
 p.ab=0;p.h=0;p.hr=0;
