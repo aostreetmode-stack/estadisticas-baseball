@@ -5,233 +5,209 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
-<link rel="icon" href="icon.jpg">
-<link rel="manifest" href="manifest.json">
-
 <style>
 body{
   margin:0;
   font-family:Arial;
-  background:#374151;
+  background:#1f2937;
   color:white;
 }
 
-.container{padding:20px;}
-input{width:100%;padding:10px;margin:5px 0;border:none;border-radius:8px;}
-button{padding:10px;border:none;border-radius:8px;font-weight:bold;}
+.container{padding:15px;}
 
-.login{background:#2563eb;color:white;width:100%;}
-.register{background:#16a34a;color:white;width:100%;}
-.logout{background:#dc2626;color:white;width:100%;}
+.player{
+  background:#374151;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:12px;
+}
 
-.header{text-align:center;padding:15px;font-size:22px;font-weight:bold;}
-.top{display:flex;justify-content:space-between;padding:10px;font-weight:bold;}
+input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  margin-bottom:10px;
+}
 
-.card{background:#4b5563;margin:10px;padding:10px;border-radius:12px;}
+.row{display:flex;gap:10px;}
 
-.name-row{display:flex;gap:5px;}
-.name{flex:1;font-size:18px;font-weight:bold;color:white;}
-.delete{background:#ef4444;color:black;font-weight:bold;}
+button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  font-weight:bold;
+  font-size:15px;
+}
 
-.stats{font-size:13px;margin:5px 0;}
-.botones{display:flex;gap:5px;}
+.out{background:#ef4444;}
+.hit{background:#d1d5db;color:black;}
+.hr{background:#22c55e;}
 
-.out{background:#dc2626;color:white;flex:1;}
-.hit{background:#9ca3af;color:black;flex:1;}
-.hr{background:#16a34a;color:white;flex:1;}
+.actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:20px;
+}
 
-.hidden{display:none;}
+.btn-white{background:#f3f4f6;color:black;}
+.btn-blue{background:#3b82f6;}
+.btn-yellow{background:#facc15;color:black;}
+
+.card{
+  background:#374151;
+  padding:12px;
+  border-radius:12px;
+  margin-top:15px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  padding:8px;
+  border-bottom:1px solid #555;
+  text-align:center;
+}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div class="container" id="loginBox">
-  <h2>Login</h2>
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
-  <button class="login" onclick="login()">Login</button>
-  <button class="register" onclick="register()">Crear cuenta</button>
-</div>
-
-<!-- APP -->
-<div id="appBox" class="hidden">
-
-<div class="header">⚾ Estadísticas Softball</div>
-
-<div class="top">
-  <div>🏆 AVG líder: <span id="liderAVG">---</span></div>
-  <div>💣 HR líder: <span id="liderHR">---</span></div>
-</div>
+<div class="container">
 
 <div id="players"></div>
 
-<div style="padding:10px;">
-  <button onclick="guardarDia()">Guardar día</button>
-  <button onclick="verHistorial()">Historial</button>
-  <button onclick="verRanking()">Ranking</button>
-  <button onclick="resetear()">Nueva temporada</button>
-  <button onclick="exportar()">Exportar</button>
-  <button onclick="logout()" class="logout">Cerrar sesión</button>
+<div class="actions">
+  <button class="btn-white" onclick="saveDay()">Guardar día</button>
+  <button class="btn-white" onclick="showHistory()">Historial</button>
+  <button class="btn-blue" onclick="ranking()">Ranking</button>
+  <button class="btn-yellow" onclick="newSeason()">Nueva temporada</button>
 </div>
 
+<div id="output"></div>
+
 </div>
 
-<script type="module">
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+let players=[];
+let history=JSON.parse(localStorage.getItem("history"))||[];
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
-  authDomain: "softball-stats-44e46.firebaseapp.com",
-  projectId: "softball-stats-44e46",
-  storageBucket: "softball-stats-44e46.firebasestorage.app",
-  messagingSenderId: "239247616602",
-  appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
-};
+function createPlayers(){
+  let container=document.getElementById("players");
+  container.innerHTML="";
+  
+  for(let i=0;i<9;i++){
+    players[i]={name:"",ab:0,h:0,hr:0};
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+    let div=document.createElement("div");
+    div.className="player";
 
-window.login = function(){
-  let email = document.getElementById("email").value;
-  let password = document.getElementById("password").value;
-  signInWithEmailAndPassword(auth,email,password).catch(e=>alert(e.message));
-}
-
-window.register = function(){
-  let email = document.getElementById("email").value;
-  let password = document.getElementById("password").value;
-  createUserWithEmailAndPassword(auth,email,password).catch(e=>alert(e.message));
-}
-
-window.logout = function(){ signOut(auth); }
-
-onAuthStateChanged(auth,user=>{
-  if(user){
-    loginBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
-  }else{
-    loginBox.classList.remove("hidden");
-    appBox.classList.add("hidden");
+    div.innerHTML=`
+      <input placeholder="Jugador ${i+1}" onchange="players[${i}].name=this.value">
+      <div id="stats${i}">#${i+1} | AB:0 H:0 HR:0 AVG:0.000</div>
+      <div class="row">
+        <button class="out" onclick="update(${i},'out')">OUT</button>
+        <button class="hit" onclick="update(${i},'hit')">HIT</button>
+        <button class="hr" onclick="update(${i},'hr')">HR</button>
+      </div>
+    `;
+    container.appendChild(div);
   }
-});
+}
 
-/* APP */
-
-let data = JSON.parse(localStorage.getItem("players")) || 
-Array(16).fill(0).map(()=>({name:"",ab:0,hits:0,hr:0}));
+function update(i,type){
+  players[i].ab++;
+  if(type==="hit") players[i].h++;
+  if(type==="hr"){players[i].h++;players[i].hr++;}
+  render();
+}
 
 function render(){
-  let container = document.getElementById("players");
-  container.innerHTML="";
+  players.forEach((p,i)=>{
+    let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
+    document.getElementById("stats"+i).innerText=
+      `#${i+1} | AB:${p.ab} H:${p.h} HR:${p.hr} AVG:${avg}`;
+  });
+}
 
-  data.sort((a,b)=>{
-    let avgA = a.ab ? a.hits/a.ab : 0;
-    let avgB = b.ab ? b.hits/b.ab : 0;
-    return avgB - avgA;
+function saveDay(){
+  let today=new Date().toLocaleDateString();
+  history.push({date:today,data:[...players]});
+  localStorage.setItem("history",JSON.stringify(history));
+  alert("Día guardado");
+}
+
+function showHistory(){
+  let output="<div class='card'><h3>Historial</h3>";
+
+  history.forEach(h=>{
+    output+=`<div class="card"><b>${h.date}</b>`;
+    h.data.forEach(p=>{
+      let avg=p.ab?(p.h/p.ab).toFixed(3):"0.000";
+      output+=`<p>${p.name || "Jugador"} - AVG:${avg}</p>`;
+    });
+    output+="</div>";
   });
 
-  let liderAVG = data[0]?.name || "---";
-  let liderHR = data.some(p=>p.hr>0) ? data.reduce((a,b)=> b.hr>a.hr?b:a).name : "---";
+  output+="</div>";
+  document.getElementById("output").innerHTML=output;
+}
 
-  liderAVG && (document.getElementById("liderAVG").innerText = liderAVG);
-  document.getElementById("liderHR").innerText = liderHR;
+function ranking(){
+  let total={};
 
-  data.forEach((p,i)=>{
-    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
+  history.forEach(day=>{
+    day.data.forEach(p=>{
+      if(!p.name) return;
 
-    container.innerHTML += `
-    <div class="card">
-      <div class="name-row">
-        <input class="name" value="${p.name}" ${p.name ? "disabled":""} onchange="setNombre(${i},this.value)">
-        <button class="delete" onclick="borrar(${i})">X</button>
-      </div>
+      if(!total[p.name]) total[p.name]={ab:0,h:0,hr:0};
 
-      <div class="stats">
-        #${i+1} | AB:${p.ab} H:${p.hits} HR:${p.hr} AVG:${avg}
-      </div>
-
-      <div class="botones">
-        <button class="out" onclick="accion(${i},'out')">OUT</button>
-        <button class="hit" onclick="accion(${i},'hit')">HIT</button>
-        <button class="hr" onclick="accion(${i},'hr')">HR</button>
-      </div>
-    </div>`;
+      total[p.name].ab+=p.ab;
+      total[p.name].h+=p.h;
+      total[p.name].hr+=p.hr;
+    });
   });
 
-  guardar();
+  let arr=Object.entries(total).map(([name,stats])=>{
+    return {
+      name,
+      ...stats,
+      avg: stats.ab?(stats.h/stats.ab).toFixed(3):"0.000"
+    }
+  });
+
+  arr.sort((a,b)=>b.avg-a.avg);
+
+  let output="<div class='card'><h3>Ranking</h3><table>";
+  output+="<tr><th>#</th><th>Jugador</th><th>AVG</th><th>HR</th></tr>";
+
+  arr.forEach((p,i)=>{
+    output+=`<tr>
+      <td>${i+1}</td>
+      <td>${p.name}</td>
+      <td>${p.avg}</td>
+      <td>${p.hr}</td>
+    </tr>`;
+  });
+
+  output+="</table></div>";
+  document.getElementById("output").innerHTML=output;
 }
 
-window.setNombre = function(i,val){
-  if(!data[i].name) data[i].name = val;
-  render();
-}
-
-window.borrar = function(i){
-  if(confirm("Borrar jugador?")){
-    data[i]={name:"",ab:0,hits:0,hr:0};
-    render();
-  }
-}
-
-window.accion = function(i,tipo){
-  data[i].ab++;
-  if(tipo==="hit") data[i].hits++;
-  if(tipo==="hr"){data[i].hits++;data[i].hr++;}
-  render();
-}
-
-function guardar(){
-  localStorage.setItem("players",JSON.stringify(data));
-}
-
-window.resetear = function(){
-  if(confirm("Nueva temporada?")){
-    localStorage.clear();
+function newSeason(){
+  if(confirm("Borrar todo el historial?")){
+    localStorage.removeItem("history");
     location.reload();
   }
 }
 
-window.guardarDia = function(){
-  let historial = JSON.parse(localStorage.getItem("historial")) || [];
-  historial.push({fecha:new Date().toLocaleString(),data:[...data]});
-  localStorage.setItem("historial",JSON.stringify(historial));
-  alert("Día guardado 🔥");
-}
-
-window.verHistorial = function(){
-  let historial = JSON.parse(localStorage.getItem("historial")) || [];
-  if(historial.length===0){alert("No hay historial");return;}
-
-  let texto="";
-  historial.forEach(dia=>{
-    texto+="📅 "+dia.fecha+"\n";
-    dia.data.forEach(p=>{
-      let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
-      texto+=`${p.name||"-"} AVG:${avg}\n`;
-    });
-    texto+="\n----\n";
-  });
-  alert(texto);
-}
-
-window.verRanking = function(){
-  let texto="RANKING\n\n";
-  data.forEach(p=>{
-    let avg = p.ab ? (p.hits/p.ab).toFixed(3) : "0.000";
-    texto += `${p.name||"-"} AVG:${avg}\n`;
-  });
-  alert(texto);
-}
-
-window.exportar = function(){
-  alert("Exportar pronto 📸");
-}
-
-render();
+createPlayers();
 
 </script>
 
