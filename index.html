@@ -18,11 +18,25 @@ h1 {
   text-align: center;
 }
 
+.top {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.leaders {
+  background: #2f3e52;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
 button {
   padding: 10px;
   border-radius: 10px;
   border: none;
   margin: 5px;
+  font-weight: bold;
 }
 
 .container {
@@ -32,28 +46,31 @@ button {
 
 .player {
   background: #2f3e52;
-  padding: 10px;
+  padding: 12px;
   margin: 10px 0;
   border-radius: 15px;
 }
 
 input {
   width: 70%;
-  padding: 8px;
+  padding: 10px;
   border-radius: 10px;
   border: none;
 }
 
+/* 🔥 BLOQUEADO */
 .locked {
-  background: #888;
+  background: #eaeaea;
+  color: black;
+  font-weight: bold;
 }
 
 .btn-out { background: red; color: white; }
-.btn-hit { background: gray; }
+.btn-hit { background: #dcdcdc; }
 .btn-hr { background: green; color: white; }
 
-.top-buttons {
-  text-align: center;
+.row {
+  margin-top: 10px;
 }
 </style>
 
@@ -64,7 +81,9 @@ input {
 
 <h1>⚾ Estadísticas Softball</h1>
 
-<div class="top-buttons">
+<div class="leaders" id="leaders"></div>
+
+<div class="top">
   <button onclick="agregarJugador()">➕ Agregar jugador</button><br>
   <button onclick="guardarDia()">Guardar día</button>
   <button onclick="verHistorial()">Historial</button>
@@ -76,41 +95,18 @@ input {
 
 </div>
 
-<script type="module">
-
-// 🔥 FIREBASE
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth,
-  signInAnonymously,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCDF4CBmDY...",
-  authDomain: "softball-stats-44e46.firebaseapp.com",
-  projectId: "softball-stats-44e46",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// LOGIN automático invitado
-signInAnonymously(auth);
-
-// =====================
+<script>
 
 let jugadores = JSON.parse(localStorage.getItem("jugadores")) || [];
 let historial = JSON.parse(localStorage.getItem("historial")) || [];
 
 if (jugadores.length === 0) {
   for (let i = 0; i < 12; i++) {
-    jugadores.push(crearJugador(i));
+    jugadores.push(crearJugador());
   }
 }
 
-function crearJugador(i) {
+function crearJugador() {
   return {
     nombre: "",
     AB: 0,
@@ -124,9 +120,29 @@ function guardar() {
   localStorage.setItem("jugadores", JSON.stringify(jugadores));
 }
 
+/* 🔥 LÍDERES */
+function calcularLideres() {
+  let conNombre = jugadores.filter(j => j.nombre);
+
+  if (conNombre.length === 0) {
+    document.getElementById("leaders").innerHTML = "Sin datos";
+    return;
+  }
+
+  let avgLider = [...conNombre].sort((a,b)=>(b.H/b.AB||0)-(a.H/a.AB||0))[0];
+  let hrLider = [...conNombre].sort((a,b)=>b.HR-a.HR)[0];
+
+  document.getElementById("leaders").innerHTML = `
+    🏆 AVG líder: ${avgLider.nombre} (${avgLider.AB ? (avgLider.H/avgLider.AB).toFixed(3) : "0.000"})<br>
+    💣 HR líder: ${hrLider.nombre} (${hrLider.HR})
+  `;
+}
+
 function render() {
   const div = document.getElementById("players");
   div.innerHTML = "";
+
+  calcularLideres();
 
   jugadores.forEach((j, i) => {
     let avg = j.AB ? (j.H / j.AB).toFixed(3) : "0.000";
@@ -142,16 +158,18 @@ function render() {
 
         <p>#${i+1} | AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}</p>
 
-        <button class="btn-out" onclick="out(${i})">OUT</button>
-        <button class="btn-hit" onclick="hit(${i})">HIT</button>
-        <button class="btn-hr" onclick="hr(${i})">HR</button>
+        <div class="row">
+          <button class="btn-out" onclick="out(${i})">OUT</button>
+          <button class="btn-hit" onclick="hit(${i})">HIT</button>
+          <button class="btn-hr" onclick="hr(${i})">HR</button>
+        </div>
       </div>
     `;
   });
 }
 
 window.bloquear = (i, nombre) => {
-  if (nombre.trim() === "") return;
+  if (!nombre.trim()) return;
   jugadores[i].nombre = nombre;
   jugadores[i].locked = true;
   guardar();
@@ -187,7 +205,7 @@ window.hr = (i) => {
 
 window.agregarJugador = () => {
   if (jugadores.length >= 16) return alert("Máximo 16");
-  jugadores.push(crearJugador(jugadores.length));
+  jugadores.push(crearJugador());
   guardar();
   render();
 };
@@ -220,7 +238,7 @@ window.verHistorial = () => {
 window.verRanking = () => {
   let ranking = [...jugadores]
     .filter(j => j.nombre)
-    .sort((a,b) => (b.H/b.AB || 0) - (a.H/a.AB || 0));
+    .sort((a,b)=>(b.H/b.AB||0)-(a.H/a.AB||0));
 
   let texto = ranking.map((j,i)=>{
     let avg = j.AB ? (j.H/j.AB).toFixed(3) : "0.000";
