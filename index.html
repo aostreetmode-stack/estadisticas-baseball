@@ -2,11 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Estadísticas Softball</title>
-
-<link rel="manifest" href="manifest.json">
 
 <style>
 body {
@@ -52,8 +50,8 @@ input {
 
 <!-- LOGIN -->
 <div id="login">
-  <input id="email" placeholder="Correo"><br>
-  <input id="pass" type="password" placeholder="Contraseña"><br>
+  <input id="emailInput" placeholder="Correo"><br>
+  <input id="passInput" type="password" placeholder="Contraseña"><br>
 
   <button onclick="login()">Entrar</button>
   <button onclick="crearCuenta()">Crear cuenta</button>
@@ -90,41 +88,12 @@ let equipoActual = null;
 let jugadores = [];
 let historial = [];
 
-function guardarLocal(){
-  localStorage.setItem("data", JSON.stringify({
-    usuario, equipoActual, jugadores, historial
-  }));
-}
-
-function cargarLocal(){
-  let d = JSON.parse(localStorage.getItem("data"));
-  if(d){
-    usuario = d.usuario;
-    equipoActual = d.equipoActual;
-    jugadores = d.jugadores || [];
-    historial = d.historial || [];
-  }
-}
-
-cargarLocal();
+function getEmail(){ return document.getElementById("emailInput").value; }
+function getPass(){ return document.getElementById("passInput").value; }
 
 function login(){
-  let e = email.value;
-  let p = pass.value;
-
-  if(!e || !p){
-    alert("Falta info");
-    return;
-  }
-
-  usuario = e;
-  guardarLocal();
-  entrarEquipos();
-}
-
-function crearCuenta(){
-  let e = email.value;
-  let p = pass.value;
+  let e = getEmail();
+  let p = getPass();
 
   if(!e || !p){
     alert("Llena todo");
@@ -132,7 +101,19 @@ function crearCuenta(){
   }
 
   usuario = e;
-  guardarLocal();
+  entrarEquipos();
+}
+
+function crearCuenta(){
+  let e = getEmail();
+  let p = getPass();
+
+  if(!e || !p){
+    alert("Llena todo");
+    return;
+  }
+
+  usuario = e;
   alert("Cuenta creada");
   entrarEquipos();
 }
@@ -143,8 +124,8 @@ function invitado(){
 }
 
 function entrarEquipos(){
-  login.style.display="none";
-  equipos.style.display="block";
+  document.getElementById("login").style.display="none";
+  document.getElementById("equipos").style.display="block";
   renderEquipos();
 }
 
@@ -162,10 +143,11 @@ function crearEquipo(){
 function renderEquipos(){
   let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
 
-  listaEquipos.innerHTML="";
+  let cont = document.getElementById("listaEquipos");
+  cont.innerHTML="";
 
   equipos.forEach((e,i)=>{
-    listaEquipos.innerHTML += `
+    cont.innerHTML += `
     <div class="card">
       ${e.nombre}<br>
       <button onclick="entrarEquipo(${i})">Entrar</button>
@@ -187,11 +169,10 @@ function entrarEquipo(i){
   jugadores = equipos[i].jugadores || [];
   historial = equipos[i].historial || [];
 
-  equiposDiv.style.display="none";
-  equipos.style.display="none";
-  app.style.display="block";
+  document.getElementById("equipos").style.display="none";
+  document.getElementById("app").style.display="block";
 
-  teamName.innerText = equipos[i].nombre;
+  document.getElementById("teamName").innerText = equipos[i].nombre;
   renderJugadores();
 }
 
@@ -211,13 +192,13 @@ function agregarJugador(){
 }
 
 function renderJugadores(){
-  jugadoresDiv = document.getElementById("jugadores");
-  jugadoresDiv.innerHTML="";
+  let div = document.getElementById("jugadores");
+  div.innerHTML="";
 
   jugadores.forEach((j,i)=>{
     let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
 
-    jugadoresDiv.innerHTML += `
+    div.innerHTML += `
     <div class="card">
       ${j.nombre}<br>
       AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}<br>
@@ -229,23 +210,9 @@ function renderJugadores(){
   });
 }
 
-function out(i){
-  jugadores[i].AB++;
-  renderJugadores();
-}
-
-function hit(i){
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  renderJugadores();
-}
-
-function hr(i){
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  jugadores[i].HR++;
-  renderJugadores();
-}
+function out(i){ jugadores[i].AB++; renderJugadores(); }
+function hit(i){ jugadores[i].AB++; jugadores[i].H++; renderJugadores(); }
+function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; renderJugadores(); }
 
 function guardarDia(){
   historial.push(JSON.parse(JSON.stringify(jugadores)));
@@ -259,11 +226,11 @@ function verHistorial(){
     return;
   }
 
-  let txt = "Historial:\n";
-  historial.forEach((dia,i)=>{
-    txt += "Día "+(i+1)+"\n";
-    dia.forEach(j=>{
-      txt += j.nombre+" AVG:"+ (j.AB? (j.H/j.AB).toFixed(3):0)+"\n";
+  let txt="Historial:\n";
+  historial.forEach((d,i)=>{
+    txt+="Día "+(i+1)+"\n";
+    d.forEach(j=>{
+      txt+=j.nombre+" AVG:"+(j.AB?(j.H/j.AB).toFixed(3):0)+"\n";
     });
   });
 
@@ -271,17 +238,17 @@ function verHistorial(){
 }
 
 function verRanking(){
-  let lista = [...jugadores];
+  let lista=[...jugadores];
 
   lista.sort((a,b)=>{
-    let avgA = a.AB ? a.H/a.AB : 0;
-    let avgB = b.AB ? b.H/b.AB : 0;
-    return avgB - avgA;
+    let A=a.AB?a.H/a.AB:0;
+    let B=b.AB?b.H/b.AB:0;
+    return B-A;
   });
 
   let txt="Ranking:\n";
   lista.forEach((j,i)=>{
-    txt += (i+1)+". "+j.nombre+"\n";
+    txt+=(i+1)+". "+j.nombre+"\n";
   });
 
   alert(txt);
@@ -289,23 +256,21 @@ function verRanking(){
 
 function rankingGlobal(){
   let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
-  let todos = [];
+  let todos=[];
 
   equipos.forEach(e=>{
-    e.jugadores.forEach(j=>{
-      todos.push(j);
-    });
+    e.jugadores.forEach(j=>todos.push(j));
   });
 
   todos.sort((a,b)=>{
-    let avgA = a.AB ? a.H/a.AB : 0;
-    let avgB = b.AB ? b.H/b.AB : 0;
-    return avgB - avgA;
+    let A=a.AB?a.H/a.AB:0;
+    let B=b.AB?b.H/b.AB:0;
+    return B-A;
   });
 
   let txt="GLOBAL:\n";
   todos.forEach((j,i)=>{
-    txt += (i+1)+". "+j.nombre+"\n";
+    txt+=(i+1)+". "+j.nombre+"\n";
   });
 
   alert(txt);
@@ -320,11 +285,6 @@ function nuevaTemp(){
 
 function salir(){
   location.reload();
-}
-
-/* SERVICE WORKER */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
 }
 </script>
 
