@@ -1,15 +1,15 @@
 {
   "name": "Softball Stats Pro",
   "short_name": "Softball",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#1f2937",
-  "theme_color": "#1f2937",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#1f2937"
 }
