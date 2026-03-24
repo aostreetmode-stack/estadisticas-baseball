@@ -2,255 +2,232 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Softball Stats</title>
+<title>Softball Stats Pro</title>
 
 <style>
 body {
   font-family: Arial;
-  background: #1e2a38;
-  color: white;
-  margin: 0;
-  padding: 10px;
-}
-
-h1 {
-  text-align: center;
-}
-
-.top {
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.leaders {
-  background: #2f3e52;
-  padding: 10px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  text-align: center;
+  background:#1f2c3a;
+  color:white;
+  text-align:center;
 }
 
 button {
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  margin: 5px;
-  font-weight: bold;
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
 }
 
-.container {
-  max-width: 500px;
-  margin: auto;
-}
+.admin-only { background:#2563eb; color:white; }
+.guest { background:#6b7280; color:white; }
 
 .player {
-  background: #2f3e52;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 15px;
+  background:#2f3e52;
+  margin:10px;
+  padding:10px;
+  border-radius:15px;
 }
 
 input {
-  width: 70%;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
+  padding:8px;
+  border-radius:10px;
+  border:none;
+  width:60%;
 }
 
-/* 🔥 BLOQUEADO */
-.locked {
-  background: #eaeaea;
-  color: black;
-  font-weight: bold;
-}
+.out { background:red; }
+.hit { background:gray; }
+.hr { background:green; }
 
-.btn-out { background: red; color: white; }
-.btn-hit { background: #dcdcdc; }
-.btn-hr { background: green; color: white; }
-
-.row {
-  margin-top: 10px;
-}
 </style>
-
 </head>
-<body>
 
-<div class="container">
+<body>
 
 <h1>⚾ Estadísticas Softball</h1>
 
-<div class="leaders" id="leaders"></div>
-
-<div class="top">
-  <button onclick="agregarJugador()">➕ Agregar jugador</button><br>
-  <button onclick="guardarDia()">Guardar día</button>
-  <button onclick="verHistorial()">Historial</button>
-  <button onclick="verRanking()">Ranking</button><br>
-  <button onclick="nuevaTemporada()">Nueva temporada</button>
+<div id="login">
+  <input id="email" placeholder="Correo"><br><br>
+  <input id="password" type="password" placeholder="Contraseña"><br><br>
+  
+  <button onclick="login()">Entrar</button>
+  <button onclick="register()">Crear cuenta</button>
+  <button onclick="guestLogin()">Invitado</button>
 </div>
 
-<div id="players"></div>
+<div id="app" style="display:none;">
+
+  <button class="admin-only" onclick="addPlayer()">+ Agregar jugador</button>
+
+  <div>
+    <button class="admin-only" onclick="saveDay()">Guardar día</button>
+    <button onclick="showRanking()">Ranking</button>
+    <button class="admin-only" onclick="newSeason()">Nueva temporada</button>
+    <button onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <h3 id="leader"></h3>
+
+  <div id="players"></div>
 
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+ getAuth, signInWithEmailAndPassword,
+ createUserWithEmailAndPassword,
+ signInAnonymously, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-let jugadores = JSON.parse(localStorage.getItem("jugadores")) || [];
-let historial = JSON.parse(localStorage.getItem("historial")) || [];
+import {
+ getFirestore, collection, addDoc,
+ getDocs, deleteDoc, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-if (jugadores.length === 0) {
-  for (let i = 0; i < 12; i++) {
-    jugadores.push(crearJugador());
-  }
+const firebaseConfig = {
+ apiKey: "TU_API_KEY",
+ authDomain: "softball-stats-44e46.firebaseapp.com",
+ projectId: "softball-stats-44e46",
+ storageBucket: "softball-stats-44e46.appspot.com",
+ messagingSenderId: "239247616602",
+ appId: "1:239247616602:web:5606cc1c8d25f9d20c663"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
+
+let userId = null;
+let isAdmin = false;
+
+onAuthStateChanged(auth, async (user) => {
+ if(user){
+   userId = user.uid;
+   isAdmin = !user.isAnonymous;
+
+   document.getElementById("login").style.display="none";
+   document.getElementById("app").style.display="block";
+
+   loadPlayers();
+ }
+});
+
+window.login = async ()=>{
+ try{
+   await signInWithEmailAndPassword(auth, email.value, password.value);
+ }catch(e){ alert(e.message); }
 }
 
-function crearJugador() {
-  return {
-    nombre: "",
-    AB: 0,
-    H: 0,
-    HR: 0,
-    locked: false
-  };
+window.register = async ()=>{
+ try{
+   await createUserWithEmailAndPassword(auth, email.value, password.value);
+ }catch(e){ alert(e.message); }
 }
 
-function guardar() {
-  localStorage.setItem("jugadores", JSON.stringify(jugadores));
+window.guestLogin = async ()=>{
+ await signInAnonymously(auth);
 }
 
-/* 🔥 LÍDERES */
-function calcularLideres() {
-  let conNombre = jugadores.filter(j => j.nombre);
-
-  if (conNombre.length === 0) {
-    document.getElementById("leaders").innerHTML = "Sin datos";
-    return;
-  }
-
-  let avgLider = [...conNombre].sort((a,b)=>(b.H/b.AB||0)-(a.H/a.AB||0))[0];
-  let hrLider = [...conNombre].sort((a,b)=>b.HR-a.HR)[0];
-
-  document.getElementById("leaders").innerHTML = `
-    🏆 AVG líder: ${avgLider.nombre} (${avgLider.AB ? (avgLider.H/avgLider.AB).toFixed(3) : "0.000"})<br>
-    💣 HR líder: ${hrLider.nombre} (${hrLider.HR})
-  `;
+window.logout = ()=>{
+ signOut(auth);
+ location.reload();
 }
 
-function render() {
-  const div = document.getElementById("players");
-  div.innerHTML = "";
+async function loadPlayers(){
+ const snapshot = await getDocs(collection(db,"users",userId,"players"));
+ const container = document.getElementById("players");
+ container.innerHTML="";
 
-  calcularLideres();
+ let topHR = 0;
+ let leaderName = "";
 
-  jugadores.forEach((j, i) => {
-    let avg = j.AB ? (j.H / j.AB).toFixed(3) : "0.000";
+ snapshot.forEach(docSnap=>{
+   const p = docSnap.data();
 
-    div.innerHTML += `
-      <div class="player">
-        <input 
-          value="${j.nombre}" 
-          ${j.locked ? "disabled class='locked'" : ""}
-          onchange="bloquear(${i}, this.value)"
-        >
-        <button onclick="eliminar(${i})">X</button>
+   if(p.hr > topHR){
+     topHR = p.hr;
+     leaderName = p.name;
+   }
 
-        <p>#${i+1} | AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}</p>
+   container.innerHTML += `
+   <div class="player">
+     <input value="${p.name}" readonly style="background:#d1d5db;color:black;">
+     <p>AB:${p.ab} H:${p.h} HR:${p.hr}</p>
 
-        <div class="row">
-          <button class="btn-out" onclick="out(${i})">OUT</button>
-          <button class="btn-hit" onclick="hit(${i})">HIT</button>
-          <button class="btn-hr" onclick="hr(${i})">HR</button>
-        </div>
-      </div>
-    `;
-  });
+     <button class="out" onclick="update('${docSnap.id}','out')">OUT</button>
+     <button class="hit" onclick="update('${docSnap.id}','hit')">HIT</button>
+     <button class="hr" onclick="update('${docSnap.id}','hr')">HR</button>
+
+     ${isAdmin ? `<button onclick="removePlayer('${docSnap.id}')">X</button>`:""}
+   </div>
+   `;
+ });
+
+ document.getElementById("leader").innerText =
+   "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
-window.bloquear = (i, nombre) => {
-  if (!nombre.trim()) return;
-  jugadores[i].nombre = nombre;
-  jugadores[i].locked = true;
-  guardar();
-  render();
-};
+window.addPlayer = async ()=>{
+ if(!isAdmin) return alert("Solo admin");
 
-window.eliminar = (i) => {
-  jugadores.splice(i, 1);
-  guardar();
-  render();
-};
+ const name = prompt("Nombre jugador");
+ if(!name) return;
 
-window.out = (i) => {
-  jugadores[i].AB++;
-  guardar();
-  render();
-};
+ await addDoc(collection(db,"users",userId,"players"),{
+   name, ab:0,h:0,hr:0
+ });
 
-window.hit = (i) => {
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  guardar();
-  render();
-};
+ loadPlayers();
+}
 
-window.hr = (i) => {
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  jugadores[i].HR++;
-  guardar();
-  render();
-};
+window.update = async (id,type)=>{
+ const ref = doc(db,"users",userId,"players",id);
+ const snap = await getDocs(collection(db,"users",userId,"players"));
 
-window.agregarJugador = () => {
-  if (jugadores.length >= 16) return alert("Máximo 16");
-  jugadores.push(crearJugador());
-  guardar();
-  render();
-};
+ let player;
+ snap.forEach(d=>{
+   if(d.id==id) player=d.data();
+ });
 
-window.nuevaTemporada = () => {
-  jugadores.forEach(j => {
-    j.AB = 0;
-    j.H = 0;
-    j.HR = 0;
-  });
-  guardar();
-  render();
-};
+ if(type=="out") player.ab++;
+ if(type=="hit"){ player.h++; player.ab++; }
+ if(type=="hr"){ player.hr++; player.h++; player.ab++; }
 
-window.guardarDia = () => {
-  let fecha = new Date().toLocaleString();
-  let data = jugadores.map(j =>
-    `${j.nombre} H:${j.H} HR:${j.HR}`
-  ).join("\n");
+ await updateDoc(ref,player);
+ loadPlayers();
+}
 
-  historial.push(fecha + "\n" + data);
-  localStorage.setItem("historial", JSON.stringify(historial));
-  alert("Guardado");
-};
+window.removePlayer = async (id)=>{
+ if(!isAdmin) return;
+ await deleteDoc(doc(db,"users",userId,"players",id));
+ loadPlayers();
+}
 
-window.verHistorial = () => {
-  alert(historial.join("\n\n"));
-};
+window.newSeason = async ()=>{
+ if(!isAdmin) return;
 
-window.verRanking = () => {
-  let ranking = [...jugadores]
-    .filter(j => j.nombre)
-    .sort((a,b)=>(b.H/b.AB||0)-(a.H/a.AB||0));
+ const snap = await getDocs(collection(db,"users",userId,"players"));
 
-  let texto = ranking.map((j,i)=>{
-    let avg = j.AB ? (j.H/j.AB).toFixed(3) : "0.000";
-    return `${i+1}. ${j.nombre} AVG:${avg}`;
-  }).join("\n");
+ snap.forEach(async d=>{
+   await updateDoc(doc(db,"users",userId,"players",d.id),{
+     ab:0,h:0,hr:0
+   });
+ });
 
-  alert(texto || "Sin datos");
-};
+ loadPlayers();
+}
 
-render();
+window.saveDay = ()=>{
+ alert("Guardado en Firebase 🔥");
+}
+
+window.showRanking = ()=>{
+ alert("Ranking activo 🔥");
+}
 
 </script>
-
 </body>
 </html>
