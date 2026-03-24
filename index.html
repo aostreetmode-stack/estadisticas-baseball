@@ -48,7 +48,6 @@ input {
 
 <h1>⚾ Estadísticas Softball</h1>
 
-<!-- LOGIN -->
 <div id="login">
   <input id="emailInput" placeholder="Correo"><br>
   <input id="passInput" type="password" placeholder="Contraseña"><br>
@@ -58,7 +57,6 @@ input {
   <button onclick="invitado()">Invitado</button>
 </div>
 
-<!-- EQUIPOS -->
 <div id="equipos" style="display:none;">
   <h2>Equipos</h2>
   <button onclick="crearEquipo()">+ Crear equipo</button>
@@ -67,7 +65,6 @@ input {
   <div id="listaEquipos"></div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
   <h2 id="teamName"></h2>
 
@@ -177,7 +174,6 @@ function renderEquipos(){
 function eliminarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
 
-  // SOLO TU puedes eliminar
   if(usuario !== "ortelio.garciaulloa@gmail.com" || passActual !== "AyO*9211"){
     alert("No tienes permiso");
     return;
@@ -192,7 +188,6 @@ function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
   let eq = equipos[i];
 
-  // VALIDAR ACCESO
   if(eq.owner !== usuario){
     alert("No puedes entrar a este equipo");
     return;
@@ -223,6 +218,7 @@ function agregarJugador(){
   if(!n) return;
 
   jugadores.push({nombre:n, AB:0, H:0, HR:0});
+  guardarEquipo(); // 🔥 FIX
   renderJugadores();
 }
 
@@ -245,9 +241,9 @@ function renderJugadores(){
   });
 }
 
-function out(i){ jugadores[i].AB++; renderJugadores(); }
-function hit(i){ jugadores[i].AB++; jugadores[i].H++; renderJugadores(); }
-function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; renderJugadores(); }
+function out(i){ jugadores[i].AB++; guardarEquipo(); renderJugadores(); }
+function hit(i){ jugadores[i].AB++; jugadores[i].H++; guardarEquipo(); renderJugadores(); }
+function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; guardarEquipo(); renderJugadores(); }
 
 /* ================= HISTORIAL ================= */
 
@@ -321,6 +317,7 @@ function nuevaTemp(){
   jugadores.forEach(j=>{
     j.AB=0; j.H=0; j.HR=0;
   });
+  guardarEquipo(); // 🔥 FIX
   renderJugadores();
 }
 
