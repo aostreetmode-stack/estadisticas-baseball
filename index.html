@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softball Stats Pro</title>
 
 <style>
@@ -10,6 +11,8 @@ body {
   background:#1f2c3a;
   color:white;
   text-align:center;
+  margin:0;
+  padding:10px;
 }
 
 button {
@@ -31,10 +34,11 @@ button {
 }
 
 input {
-  padding:8px;
+  padding:10px;
   border-radius:10px;
   border:none;
-  width:60%;
+  width:90%;
+  max-width:400px;
 }
 
 .out { background:red; }
@@ -113,7 +117,7 @@ let isAdminGlobal = false;
 let isAdminTeam = false;
 let teamId = null;
 
-// 🔐 LOGIN STATE
+// LOGIN STATE
 onAuthStateChanged(auth, async (u)=>{
  if(!u) return;
 
@@ -127,16 +131,43 @@ onAuthStateChanged(auth, async (u)=>{
  loadEquipos();
 });
 
-// AUTH
-window.login = ()=>signInWithEmailAndPassword(auth,email.value,password.value);
-window.register = ()=>createUserWithEmailAndPassword(auth,email.value,password.value);
-window.guestLogin = ()=>signInAnonymously(auth);
-window.logout = ()=>{ signOut(auth); location.reload(); }
+// LOGIN
+window.login = async ()=>{
+  const emailInput = document.getElementById("email").value;
+  const passInput = document.getElementById("password").value;
 
-// ---------------------
-// 🧢 EQUIPOS
-// ---------------------
+  try{
+    await signInWithEmailAndPassword(auth, emailInput, passInput);
+  }catch(e){
+    alert(e.message);
+  }
+}
 
+window.register = async ()=>{
+  const emailInput = document.getElementById("email").value;
+  const passInput = document.getElementById("password").value;
+
+  try{
+    await createUserWithEmailAndPassword(auth, emailInput, passInput);
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+window.guestLogin = async ()=>{
+  try{
+    await signInAnonymously(auth);
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+window.logout = ()=>{
+ signOut(auth);
+ location.reload();
+}
+
+// EQUIPOS
 async function loadEquipos(){
  const snap = await getDocs(collection(db,"equipos"));
  const cont = document.getElementById("listaEquipos");
@@ -168,13 +199,9 @@ window.crearEquipo = async ()=>{
  loadEquipos();
 }
 
-// ---------------------
-// 🎯 ENTRAR EQUIPO
-// ---------------------
-
+// ENTRAR EQUIPO
 window.entrarEquipo = (id, adminEmail)=>{
  teamId = id;
-
  isAdminTeam = (user.email === adminEmail);
 
  document.getElementById("teams").style.display="none";
@@ -183,10 +210,7 @@ window.entrarEquipo = (id, adminEmail)=>{
  loadPlayers();
 }
 
-// ---------------------
-// 👥 JUGADORES
-// ---------------------
-
+// JUGADORES
 async function loadPlayers(){
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
  const container = document.getElementById("players");
@@ -221,10 +245,7 @@ async function loadPlayers(){
    "🔥 Líder HR: " + (leaderName || "Nadie") + " ("+topHR+")";
 }
 
-// ---------------------
-// ➕ AGREGAR
-// ---------------------
-
+// AGREGAR
 window.addPlayer = async ()=>{
  if(!(isAdminTeam || isAdminGlobal)) return alert("Solo admin");
 
@@ -238,10 +259,7 @@ window.addPlayer = async ()=>{
  loadPlayers();
 }
 
-// ---------------------
-// ⚾ UPDATE
-// ---------------------
-
+// UPDATE
 window.update = async (id,type)=>{
  const ref = doc(db,"equipos",teamId,"jugadores",id);
  const snap = await getDocs(collection(db,"equipos",teamId,"jugadores"));
@@ -259,20 +277,14 @@ window.update = async (id,type)=>{
  loadPlayers();
 }
 
-// ---------------------
-// ❌ ELIMINAR
-// ---------------------
-
+// ELIMINAR
 window.removePlayer = async (id)=>{
  if(!(isAdminTeam || isAdminGlobal)) return;
  await deleteDoc(doc(db,"equipos",teamId,"jugadores",id));
  loadPlayers();
 }
 
-// ---------------------
-// 🔄 NUEVA TEMPORADA
-// ---------------------
-
+// NUEVA TEMPORADA
 window.newSeason = async ()=>{
  if(!(isAdminTeam || isAdminGlobal)) return;
 
@@ -287,10 +299,7 @@ window.newSeason = async ()=>{
  loadPlayers();
 }
 
-// ---------------------
 // EXTRA
-// ---------------------
-
 window.saveDay = ()=>alert("Guardado 🔥");
 
 window.showRanking = ()=>{
