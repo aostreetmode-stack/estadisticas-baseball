@@ -2,48 +2,47 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-
-<!-- 🔥 FIX ZOOM -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <title>Estadísticas Softball</title>
 
-<!-- 🔥 FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-<!-- 🔥 PWA (INSTALAR APP COMO ANTES) -->
 <link rel="manifest" href="manifest.json">
 
 <style>
-body{
- background:#1f2c3a;
- color:white;
- text-align:center;
- font-family:Arial;
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #1e2b3a;
+  color: white;
+  text-align: center;
 }
 
-button{
- padding:10px;
- margin:5px;
- border-radius:10px;
- border:none;
+button {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
 }
 
-.player{
- background:#2f3e52;
- margin:10px;
- padding:10px;
- border-radius:10px;
+.card {
+  background: #2e3f55;
+  margin: 10px;
+  padding: 15px;
+  border-radius: 15px;
 }
 
-.card{
- background:#2f3e52;
- margin:10px;
- padding:10px;
- border-radius:10px;
+input {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin: 5px;
+  width: 80%;
 }
+
+.out { background:red; color:white;}
+.hit { background:gray;}
+.hr { background:green; color:white;}
 </style>
 </head>
 
@@ -53,288 +52,280 @@ button{
 
 <!-- LOGIN -->
 <div id="login">
-<input id="email" placeholder="Correo"><br><br>
-<input id="password" type="password" placeholder="Contraseña"><br><br>
+  <input id="email" placeholder="Correo"><br>
+  <input id="pass" type="password" placeholder="Contraseña"><br>
 
-<button onclick="login()">Entrar</button>
-<button onclick="register()">Crear cuenta</button>
-<button onclick="guestLogin()">Invitado</button>
+  <button onclick="login()">Entrar</button>
+  <button onclick="crearCuenta()">Crear cuenta</button>
+  <button onclick="invitado()">Invitado</button>
 </div>
 
 <!-- EQUIPOS -->
-<div id="teams" style="display:none;">
-<h2>Equipos</h2>
+<div id="equipos" style="display:none;">
+  <h2>Equipos</h2>
+  <button onclick="crearEquipo()">+ Crear equipo</button>
+  <button onclick="rankingGlobal()">🏆 Ranking Global</button>
 
-<button onclick="rankingGlobal()">🏆 Ranking Global</button>
-<button onclick="crearEquipo()">+ Crear equipo</button>
-
-<div id="listaEquipos"></div>
+  <div id="listaEquipos"></div>
 </div>
 
 <!-- APP -->
 <div id="app" style="display:none;">
+  <h2 id="teamName"></h2>
 
-<h2 id="teamName"></h2>
+  <button onclick="agregarJugador()">+ Jugador</button><br>
 
-<button onclick="addPlayer()">+ Jugador</button>
+  <button onclick="guardarDia()">Guardar día</button>
+  <button onclick="verHistorial()">Historial</button>
+  <button onclick="verRanking()">Ranking</button>
+  <button onclick="nuevaTemp()">Nueva temporada</button>
+  <button onclick="salir()">Salir</button>
 
-<div>
-<button onclick="saveDay()">Guardar día</button>
-<button onclick="showHistory()">Historial</button>
-<button onclick="showRanking()">Ranking</button>
-<button onclick="newSeason()">Nueva temporada</button>
-<button onclick="logout()">Salir</button>
-</div>
-
-<div id="players"></div>
-
+  <div id="jugadores"></div>
 </div>
 
 <script>
+let usuario = null;
+let equipoActual = null;
+let jugadores = [];
+let historial = [];
 
-const firebaseConfig = {
- apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
- authDomain: "softball-stats-44e46.firebaseapp.com",
- projectId: "softball-stats-44e46"
-};
+function guardarLocal(){
+  localStorage.setItem("data", JSON.stringify({
+    usuario, equipoActual, jugadores, historial
+  }));
+}
 
-firebase.initializeApp(firebaseConfig);
+function cargarLocal(){
+  let d = JSON.parse(localStorage.getItem("data"));
+  if(d){
+    usuario = d.usuario;
+    equipoActual = d.equipoActual;
+    jugadores = d.jugadores || [];
+    historial = d.historial || [];
+  }
+}
 
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let user=null;
-let teamId=null;
-
-// 🔥 AUTH
+cargarLocal();
 
 function login(){
- auth.signInWithEmailAndPassword(email.value,password.value)
- .catch(e=>alert(e.message));
+  let e = email.value;
+  let p = pass.value;
+
+  if(!e || !p){
+    alert("Falta info");
+    return;
+  }
+
+  usuario = e;
+  guardarLocal();
+  entrarEquipos();
 }
 
-function register(){
- auth.createUserWithEmailAndPassword(email.value,password.value)
- .catch(e=>alert(e.message));
+function crearCuenta(){
+  let e = email.value;
+  let p = pass.value;
+
+  if(!e || !p){
+    alert("Llena todo");
+    return;
+  }
+
+  usuario = e;
+  guardarLocal();
+  alert("Cuenta creada");
+  entrarEquipos();
 }
 
-function guestLogin(){
- auth.signInAnonymously()
- .catch(e=>alert(e.message));
+function invitado(){
+  usuario = "invitado";
+  entrarEquipos();
 }
 
-function logout(){
- location.reload();
+function entrarEquipos(){
+  login.style.display="none";
+  equipos.style.display="block";
+  renderEquipos();
 }
 
-// 🔥 FIX LOGIN FLOW
-auth.onAuthStateChanged(u=>{
- if(!u){
-   document.getElementById("login").style.display="block";
-   document.getElementById("teams").style.display="none";
-   document.getElementById("app").style.display="none";
-   return;
- }
+function crearEquipo(){
+  let nombre = prompt("Nombre equipo");
+  if(!nombre) return;
 
- user=u;
+  let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
+  equipos.push({nombre, jugadores:[], historial:[]});
+  localStorage.setItem("equipos", JSON.stringify(equipos));
 
- document.getElementById("login").style.display="none";
- document.getElementById("teams").style.display="block";
-
- loadEquipos();
-});
-
-// ---------------- EQUIPOS ----------------
-
-async function loadEquipos(){
- const snap=await db.collection("equipos").get();
- const cont=document.getElementById("listaEquipos");
- cont.innerHTML="";
-
- snap.forEach(d=>{
-  const e=d.data();
-
-  cont.innerHTML+=`
-  <div class="card">
-    ${e.nombre}<br>
-    <button onclick="entrarEquipo('${d.id}','${e.nombre}')">Entrar</button>
-    <button onclick="eliminarEquipo('${d.id}')">❌</button>
-  </div>`;
- });
+  renderEquipos();
 }
 
-async function crearEquipo(){
- let nombre=prompt("Nombre equipo");
- if(!nombre) return;
+function renderEquipos(){
+  let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
 
- await db.collection("equipos").add({nombre});
- loadEquipos();
+  listaEquipos.innerHTML="";
+
+  equipos.forEach((e,i)=>{
+    listaEquipos.innerHTML += `
+    <div class="card">
+      ${e.nombre}<br>
+      <button onclick="entrarEquipo(${i})">Entrar</button>
+      <button onclick="eliminarEquipo(${i})">❌</button>
+    </div>`;
+  });
 }
 
-async function eliminarEquipo(id){
- if(!confirm("Eliminar equipo?")) return;
-
- await db.collection("equipos").doc(id).delete();
- loadEquipos();
+function eliminarEquipo(i){
+  let equipos = JSON.parse(localStorage.getItem("equipos"));
+  equipos.splice(i,1);
+  localStorage.setItem("equipos", JSON.stringify(equipos));
+  renderEquipos();
 }
 
-function entrarEquipo(id,nombre){
- teamId=id;
+function entrarEquipo(i){
+  let equipos = JSON.parse(localStorage.getItem("equipos"));
+  equipoActual = i;
+  jugadores = equipos[i].jugadores || [];
+  historial = equipos[i].historial || [];
 
- document.getElementById("teams").style.display="none";
- document.getElementById("app").style.display="block";
+  equiposDiv.style.display="none";
+  equipos.style.display="none";
+  app.style.display="block";
 
- document.getElementById("teamName").innerText=nombre;
-
- loadPlayers();
+  teamName.innerText = equipos[i].nombre;
+  renderJugadores();
 }
 
-// ---------------- JUGADORES ----------------
-
-async function loadPlayers(){
- const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
- const cont=document.getElementById("players");
- cont.innerHTML="";
-
- snap.forEach(d=>{
-  const p=d.data();
-
-  cont.innerHTML+=`
-  <div class="player">
-    ${p.nombre}<br>
-    AB:${p.ab} H:${p.h} HR:${p.hr}<br>
-
-    <button onclick="update('${d.id}','out')">OUT</button>
-    <button onclick="update('${d.id}','hit')">HIT</button>
-    <button onclick="update('${d.id}','hr')">HR</button>
-  </div>`;
- });
+function guardarEquipo(){
+  let equipos = JSON.parse(localStorage.getItem("equipos"));
+  equipos[equipoActual].jugadores = jugadores;
+  equipos[equipoActual].historial = historial;
+  localStorage.setItem("equipos", JSON.stringify(equipos));
 }
 
-async function addPlayer(){
- let name=prompt("Nombre");
- if(!name) return;
+function agregarJugador(){
+  let n = prompt("Nombre jugador");
+  if(!n) return;
 
- await db.collection("equipos").doc(teamId).collection("jugadores").add({
-  nombre:name,ab:0,h:0,hr:0
- });
-
- loadPlayers();
+  jugadores.push({nombre:n, AB:0, H:0, HR:0});
+  renderJugadores();
 }
 
-async function update(id,type){
- const ref=db.collection("equipos").doc(teamId).collection("jugadores").doc(id);
- const docu=await ref.get();
- let p=docu.data();
+function renderJugadores(){
+  jugadoresDiv = document.getElementById("jugadores");
+  jugadoresDiv.innerHTML="";
 
- if(type=="out") p.ab++;
- if(type=="hit"){p.ab++;p.h++;}
- if(type=="hr"){p.ab++;p.h++;p.hr++;}
+  jugadores.forEach((j,i)=>{
+    let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
 
- await ref.update(p);
- loadPlayers();
+    jugadoresDiv.innerHTML += `
+    <div class="card">
+      ${j.nombre}<br>
+      AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}<br>
+
+      <button class="out" onclick="out(${i})">OUT</button>
+      <button class="hit" onclick="hit(${i})">HIT</button>
+      <button class="hr" onclick="hr(${i})">HR</button>
+    </div>`;
+  });
 }
 
-// ---------------- HISTORIAL ----------------
-
-async function saveDay(){
- const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
-
- let jugadores=[];
- snap.forEach(d=>jugadores.push(d.data()));
-
- await db.collection("equipos").doc(teamId).collection("historial").add({
-  fecha:new Date().toLocaleString(),
-  jugadores
- });
-
- alert("Guardado");
+function out(i){
+  jugadores[i].AB++;
+  renderJugadores();
 }
 
-async function showHistory(){
- const snap=await db.collection("equipos").doc(teamId).collection("historial").get();
+function hit(i){
+  jugadores[i].AB++;
+  jugadores[i].H++;
+  renderJugadores();
+}
 
- let txt="HISTORIAL\n\n";
+function hr(i){
+  jugadores[i].AB++;
+  jugadores[i].H++;
+  jugadores[i].HR++;
+  renderJugadores();
+}
 
- snap.forEach(d=>{
-  let dia=d.data();
+function guardarDia(){
+  historial.push(JSON.parse(JSON.stringify(jugadores)));
+  guardarEquipo();
+  alert("Guardado");
+}
 
-  txt+=dia.fecha+"\n";
+function verHistorial(){
+  if(historial.length==0){
+    alert("No hay historial");
+    return;
+  }
 
-  dia.jugadores.forEach(p=>{
-   txt+=`${p.nombre} H:${p.h} HR:${p.hr}\n`;
+  let txt = "Historial:\n";
+  historial.forEach((dia,i)=>{
+    txt += "Día "+(i+1)+"\n";
+    dia.forEach(j=>{
+      txt += j.nombre+" AVG:"+ (j.AB? (j.H/j.AB).toFixed(3):0)+"\n";
+    });
   });
 
-  txt+="------\n";
- });
-
- alert(txt);
+  alert(txt);
 }
 
-// ---------------- RANKING ----------------
+function verRanking(){
+  let lista = [...jugadores];
 
-async function showRanking(){
- const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
+  lista.sort((a,b)=>{
+    let avgA = a.AB ? a.H/a.AB : 0;
+    let avgB = b.AB ? b.H/b.AB : 0;
+    return avgB - avgA;
+  });
 
- let arr=[];
+  let txt="Ranking:\n";
+  lista.forEach((j,i)=>{
+    txt += (i+1)+". "+j.nombre+"\n";
+  });
 
- snap.forEach(d=>{
-  let p=d.data();
-  let avg=p.ab? p.h/p.ab:0;
-
-  arr.push({nombre:p.nombre,avg});
- });
-
- arr.sort((a,b)=>b.avg-a.avg);
-
- let txt="Ranking\n\n";
-
- arr.forEach((p,i)=>{
-  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
- });
-
- alert(txt);
+  alert(txt);
 }
 
-async function rankingGlobal(){
- const equipos=await db.collection("equipos").get();
- let arr=[];
+function rankingGlobal(){
+  let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
+  let todos = [];
 
- for(const e of equipos.docs){
-  const jugadores=await db.collection("equipos").doc(e.id).collection("jugadores").get();
+  equipos.forEach(e=>{
+    e.jugadores.forEach(j=>{
+      todos.push(j);
+    });
+  });
 
+  todos.sort((a,b)=>{
+    let avgA = a.AB ? a.H/a.AB : 0;
+    let avgB = b.AB ? b.H/b.AB : 0;
+    return avgB - avgA;
+  });
+
+  let txt="GLOBAL:\n";
+  todos.forEach((j,i)=>{
+    txt += (i+1)+". "+j.nombre+"\n";
+  });
+
+  alert(txt);
+}
+
+function nuevaTemp(){
   jugadores.forEach(j=>{
-   let p=j.data();
-   let avg=p.ab? p.h/p.ab:0;
-
-   arr.push({nombre:p.nombre,avg});
+    j.AB=0; j.H=0; j.HR=0;
   });
- }
-
- arr.sort((a,b)=>b.avg-a.avg);
-
- let txt="GLOBAL\n\n";
-
- arr.slice(0,10).forEach((p,i)=>{
-  txt+=`${i+1}. ${p.nombre} ${p.avg.toFixed(3)}\n`;
- });
-
- alert(txt);
+  renderJugadores();
 }
 
-// ---------------- TEMPORADA ----------------
-
-async function newSeason(){
- const snap=await db.collection("equipos").doc(teamId).collection("jugadores").get();
-
- snap.forEach(d=>{
-  db.collection("equipos").doc(teamId).collection("jugadores").doc(d.id)
-  .update({ab:0,h:0,hr:0});
- });
-
- loadPlayers();
+function salir(){
+  location.reload();
 }
 
+/* SERVICE WORKER */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
 </script>
 
 </body>
