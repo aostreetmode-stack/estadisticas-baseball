@@ -84,6 +84,7 @@ input {
 
 <script>
 let usuario = null;
+let passActual = null;
 let equipoActual = null;
 let jugadores = [];
 let historial = [];
@@ -100,10 +101,9 @@ function login(){
   }
 
   usuario = e;
+  passActual = p;
 
-  setTimeout(() => {
-    entrarEquipos();
-  }, 100);
+  setTimeout(() => entrarEquipos(), 100);
 }
 
 function crearCuenta(){
@@ -116,20 +116,16 @@ function crearCuenta(){
   }
 
   usuario = e;
+  passActual = p;
 
   alert("Cuenta creada");
-
-  setTimeout(() => {
-    entrarEquipos();
-  }, 100);
+  setTimeout(() => entrarEquipos(), 100);
 }
 
 function invitado(){
   usuario = "invitado";
-
-  setTimeout(() => {
-    entrarEquipos();
-  }, 100);
+  passActual = null;
+  setTimeout(() => entrarEquipos(), 100);
 }
 
 /* ================= EQUIPOS ================= */
@@ -141,13 +137,25 @@ function entrarEquipos(){
 }
 
 function crearEquipo(){
+  if(usuario === "invitado"){
+    alert("Invitado no puede crear equipos");
+    return;
+  }
+
   let nombre = prompt("Nombre equipo");
   if(!nombre) return;
 
   let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
-  equipos.push({nombre, jugadores:[], historial:[]});
-  localStorage.setItem("equipos", JSON.stringify(equipos));
 
+  equipos.push({
+    nombre,
+    jugadores:[],
+    historial:[],
+    owner: usuario,
+    pass: passActual
+  });
+
+  localStorage.setItem("equipos", JSON.stringify(equipos));
   renderEquipos();
 }
 
@@ -168,6 +176,13 @@ function renderEquipos(){
 
 function eliminarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
+
+  // SOLO TU puedes eliminar
+  if(usuario !== "ortelio.garciaulloa@gmail.com" || passActual !== "AyO*9211"){
+    alert("No tienes permiso");
+    return;
+  }
+
   equipos.splice(i,1);
   localStorage.setItem("equipos", JSON.stringify(equipos));
   renderEquipos();
@@ -175,14 +190,22 @@ function eliminarEquipo(i){
 
 function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
+  let eq = equipos[i];
+
+  // VALIDAR ACCESO
+  if(eq.owner !== usuario){
+    alert("No puedes entrar a este equipo");
+    return;
+  }
+
   equipoActual = i;
-  jugadores = equipos[i].jugadores || [];
-  historial = equipos[i].historial || [];
+  jugadores = eq.jugadores || [];
+  historial = eq.historial || [];
 
   document.getElementById("equipos").style.display="none";
   document.getElementById("app").style.display="block";
 
-  document.getElementById("teamName").innerText = equipos[i].nombre;
+  document.getElementById("teamName").innerText = eq.nombre;
   renderJugadores();
 }
 
