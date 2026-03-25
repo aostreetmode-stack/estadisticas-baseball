@@ -105,41 +105,54 @@ let historial = [];
 
 /* LOGIN */
 function login(){
-  let e = emailInput.value;
-  let p = passInput.value;
-  if(!e || !p) return alert("Llena todo");
+  let e = document.getElementById("emailInput").value;
+  let p = document.getElementById("passInput").value;
+
+  if(!e || !p){
+    alert("Llena todo");
+    return;
+  }
 
   usuario = e;
   passActual = p;
-  setTimeout(entrarEquipos,100);
+
+  setTimeout(() => entrarEquipos(),100);
 }
 
 function crearCuenta(){
-  let e = emailInput.value;
-  let p = passInput.value;
-  if(!e || !p) return alert("Llena todo");
+  let e = document.getElementById("emailInput").value;
+  let p = document.getElementById("passInput").value;
+
+  if(!e || !p){
+    alert("Llena todo");
+    return;
+  }
 
   usuario = e;
   passActual = p;
+
   alert("Cuenta creada");
-  setTimeout(entrarEquipos,100);
+  setTimeout(() => entrarEquipos(),100);
 }
 
 function invitado(){
   usuario = "invitado";
   passActual = null;
-  setTimeout(entrarEquipos,100);
+  setTimeout(() => entrarEquipos(),100);
 }
 
 /* EQUIPOS */
 function entrarEquipos(){
-  login.style.display="none";
-  equipos.style.display="block";
+  document.getElementById("login").style.display="none";
+  document.getElementById("equipos").style.display="block";
   renderEquipos();
 }
 
 function crearEquipo(){
-  if(usuario==="invitado") return alert("Invitado no puede crear");
+  if(usuario==="invitado"){
+    alert("Invitado no puede crear");
+    return;
+  }
 
   let nombre = prompt("Nombre equipo");
   if(!nombre) return;
@@ -160,10 +173,11 @@ function crearEquipo(){
 
 function renderEquipos(){
   let equipos = JSON.parse(localStorage.getItem("equipos"))||[];
-  listaEquipos.innerHTML="";
+  let cont = document.getElementById("listaEquipos");
+  cont.innerHTML="";
 
   equipos.forEach((e,i)=>{
-    listaEquipos.innerHTML+=`
+    cont.innerHTML+=`
     <div class="card">
       ${e.nombre}<br>
       <button onclick="entrarEquipo(${i})">Entrar</button>
@@ -176,7 +190,8 @@ function eliminarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
 
   if(usuario!=="ortelio.garciaulloa@gmail.com" || passActual!=="AyO*9211"){
-    return alert("No tienes permiso");
+    alert("No tienes permiso");
+    return;
   }
 
   equipos.splice(i,1);
@@ -192,17 +207,18 @@ function entrarEquipo(i){
     eq.owner !== usuario &&
     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
   ){
-    return alert("No puedes entrar");
+    alert("No puedes entrar");
+    return;
   }
 
   equipoActual=i;
   jugadores=eq.jugadores||[];
   historial=eq.historial||[];
 
-  equiposDiv.style.display="none";
-  app.style.display="block";
+  document.getElementById("equipos").style.display="none";
+  document.getElementById("app").style.display="block";
 
-  teamName.innerText=eq.nombre;
+  document.getElementById("teamName").innerText=eq.nombre;
   renderJugadores();
 }
 
@@ -231,7 +247,8 @@ function eliminarJugador(i){
     eq.owner !== usuario &&
     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
   ){
-    return alert("No puedes borrar jugadores");
+    alert("No puedes borrar jugadores");
+    return;
   }
 
   jugadores.splice(i,1);
@@ -240,13 +257,13 @@ function eliminarJugador(i){
 }
 
 function renderJugadores(){
-  jugadoresDiv = document.getElementById("jugadores");
-  jugadoresDiv.innerHTML="";
+  let div = document.getElementById("jugadores");
+  div.innerHTML="";
 
   jugadores.forEach((j,i)=>{
     let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
 
-    jugadoresDiv.innerHTML+=`
+    div.innerHTML+=`
     <div class="card">
       <button class="deleteBtn" onclick="eliminarJugador(${i})">X</button>
 
@@ -264,67 +281,6 @@ function out(i){ jugadores[i].AB++; guardarEquipo(); renderJugadores();}
 function hit(i){ jugadores[i].AB++; jugadores[i].H++; guardarEquipo(); renderJugadores();}
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; guardarEquipo(); renderJugadores();}
 
-/* HISTORIAL */
-function guardarDia(){
-  historial.push(JSON.parse(JSON.stringify(jugadores)));
-  guardarEquipo();
-  alert("Guardado");
-}
-
-function verHistorial(){
-  if(historial.length==0) return alert("No hay historial");
-
-  let txt="Historial:\n";
-  historial.forEach((d,i)=>{
-    txt+="Día "+(i+1)+"\n";
-    d.forEach(j=>{
-      txt+=j.nombre+"\n";
-    });
-  });
-
-  alert(txt);
-}
-
-/* RANKINGS */
-function verRanking(){
-  let lista=[...jugadores];
-  lista.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
-
-  let txt="AVG:\n";
-  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
-
-  alert(txt);
-}
-
-function rankingHR(){
-  let lista=[...jugadores];
-  lista.sort((a,b)=> b.HR-a.HR);
-
-  let txt="HR:\n";
-  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n");
-
-  alert(txt);
-}
-
-function rankingGlobal(){
-  let equipos = JSON.parse(localStorage.getItem("equipos"))||[];
-  let todos=[];
-
-  equipos.forEach(e=> e.jugadores.forEach(j=>todos.push(j)));
-
-  todos.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
-
-  let txt="GLOBAL:\n";
-  todos.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
-
-  alert(txt);
-}
-
-/* PWA */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-
 /* OTROS */
 function nuevaTemp(){
   jugadores.forEach(j=>{j.AB=0;j.H=0;j.HR=0});
@@ -333,6 +289,10 @@ function nuevaTemp(){
 }
 
 function salir(){ location.reload(); }
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
 </script>
 
 </body>
