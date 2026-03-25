@@ -99,6 +99,9 @@ input {
   <button onclick="salir()">Salir</button>
 
   <div id="jugadores"></div>
+
+  <!-- 🔥 NUEVO BOTÓN -->
+  <button onclick="borrarHistorial()">🧹 Borrar historial</button>
 </div>
 
 <script>
@@ -293,13 +296,23 @@ function verHistorial(){
   alert(txt);
 }
 
+/* 🔥 NUEVA FUNCIÓN */
+function borrarHistorial(){
+  historial = [];
+  guardarEquipo();
+  alert("Historial borrado");
+}
+
 /* RANKINGS */
 function verRanking(){
   let lista=[...jugadores];
   lista.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
 
   let txt="AVG:\n";
-  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
+  lista.forEach((j,i)=>{
+    let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
+    txt+=(i+1)+". "+j.nombre+" ("+avg+")\n";
+  });
 
   alert(txt);
 }
