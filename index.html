@@ -36,7 +36,6 @@ button {
   position: relative;
 }
 
-/* 🔥 SOLO ESTO SE MEJORÓ (NO BORRA NADA) */
 .deleteBtn {
   position: absolute;
   top: 10px;
@@ -47,14 +46,11 @@ button {
   width: 30px;
   height: 30px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
 }
-
-/* 🔥 NUEVO COLOR BB */
-.bb { background:#f1c40f; color:black; }
 
 input {
   padding: 12px;
@@ -117,37 +113,29 @@ function login(){
   let e = document.getElementById("emailInput").value;
   let p = document.getElementById("passInput").value;
 
-  if(!e || !p){
-    alert("Llena todo");
-    return;
-  }
+  if(!e || !p) return alert("Llena todo");
 
   usuario = e;
   passActual = p;
-
-  setTimeout(() => entrarEquipos(),100);
+  setTimeout(()=>entrarEquipos(),100);
 }
 
 function crearCuenta(){
   let e = document.getElementById("emailInput").value;
   let p = document.getElementById("passInput").value;
 
-  if(!e || !p){
-    alert("Llena todo");
-    return;
-  }
+  if(!e || !p) return alert("Llena todo");
 
   usuario = e;
   passActual = p;
-
   alert("Cuenta creada");
-  setTimeout(() => entrarEquipos(),100);
+  setTimeout(()=>entrarEquipos(),100);
 }
 
 function invitado(){
   usuario = "invitado";
   passActual = null;
-  setTimeout(() => entrarEquipos(),100);
+  setTimeout(()=>entrarEquipos(),100);
 }
 
 /* EQUIPOS */
@@ -158,10 +146,7 @@ function entrarEquipos(){
 }
 
 function crearEquipo(){
-  if(usuario==="invitado"){
-    alert("Invitado no puede crear");
-    return;
-  }
+  if(usuario==="invitado") return alert("Invitado no puede crear");
 
   let nombre = prompt("Nombre equipo");
   if(!nombre) return;
@@ -199,8 +184,7 @@ function eliminarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
 
   if(usuario!=="ortelio.garciaulloa@gmail.com" || passActual!=="AyO*9211"){
-    alert("No tienes permiso");
-    return;
+    return alert("No tienes permiso");
   }
 
   equipos.splice(i,1);
@@ -216,8 +200,7 @@ function entrarEquipo(i){
     eq.owner !== usuario &&
     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
   ){
-    alert("No puedes entrar");
-    return;
+    return alert("No puedes entrar");
   }
 
   equipoActual=i;
@@ -243,7 +226,7 @@ function agregarJugador(){
   let n=prompt("Nombre jugador");
   if(!n) return;
 
-  jugadores.push({nombre:n,AB:0,H:0,HR:0,BB:0});
+  jugadores.push({nombre:n,AB:0,H:0,HR:0});
   guardarEquipo();
   renderJugadores();
 }
@@ -256,8 +239,7 @@ function eliminarJugador(i){
     eq.owner !== usuario &&
     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
   ){
-    alert("No puedes borrar jugadores");
-    return;
+    return alert("No puedes borrar jugadores");
   }
 
   jugadores.splice(i,1);
@@ -277,12 +259,11 @@ function renderJugadores(){
       <button class="deleteBtn" onclick="eliminarJugador(${i})">X</button>
 
       ${j.nombre}<br>
-      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${j.BB} AVG:${avg}<br>
+      AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}<br>
 
       <button class="out" onclick="out(${i})">OUT</button>
       <button class="hit" onclick="hit(${i})">HIT</button>
       <button class="hr" onclick="hr(${i})">HR</button>
-      <button class="bb" onclick="bb(${i})">BB</button>
     </div>`;
   });
 }
@@ -290,25 +271,76 @@ function renderJugadores(){
 function out(i){ jugadores[i].AB++; guardarEquipo(); renderJugadores();}
 function hit(i){ jugadores[i].AB++; jugadores[i].H++; guardarEquipo(); renderJugadores();}
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; guardarEquipo(); renderJugadores();}
-function bb(i){ jugadores[i].BB++; guardarEquipo(); renderJugadores();}
+
+/* HISTORIAL */
+function guardarDia(){
+  historial.push(JSON.parse(JSON.stringify(jugadores)));
+  guardarEquipo();
+  alert("Guardado");
+}
+
+function verHistorial(){
+  if(historial.length==0) return alert("No hay historial");
+
+  let txt="Historial:\n";
+  historial.forEach((d,i)=>{
+    txt+="Día "+(i+1)+"\n";
+    d.forEach(j=>{
+      txt+=j.nombre+" AVG:"+(j.AB?(j.H/j.AB).toFixed(3):0)+"\n";
+    });
+  });
+
+  alert(txt);
+}
+
+/* RANKINGS */
+function verRanking(){
+  let lista=[...jugadores];
+  lista.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
+
+  let txt="AVG:\n";
+  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
+
+  alert(txt);
+}
+
+function rankingHR(){
+  let lista=[...jugadores];
+  lista.sort((a,b)=> b.HR-a.HR);
+
+  let txt="HR:\n";
+  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n");
+
+  alert(txt);
+}
+
+function rankingGlobal(){
+  let equipos = JSON.parse(localStorage.getItem("equipos"))||[];
+  let todos=[];
+
+  equipos.forEach(e=> e.jugadores.forEach(j=>todos.push(j)));
+
+  todos.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
+
+  let txt="GLOBAL:\n";
+  todos.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
+
+  alert(txt);
+}
+
+/* PWA */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
 
 /* OTROS */
 function nuevaTemp(){
-  jugadores.forEach(j=>{
-    j.AB=0;
-    j.H=0;
-    j.HR=0;
-    j.BB=0;
-  });
+  jugadores.forEach(j=>{j.AB=0;j.H=0;j.HR=0});
   guardarEquipo();
   renderJugadores();
 }
 
 function salir(){ location.reload(); }
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
 </script>
 
 </body>
