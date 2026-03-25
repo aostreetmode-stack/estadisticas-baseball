@@ -63,6 +63,16 @@ input {
 .out { background:red; }
 .hit { background:#888; }
 .hr { background:green; }
+
+/* 🔥 NUEVO BB */
+.bb { background:#f1c40f; color:black; }
+
+/* 🔥 NOMBRE GRANDE */
+.nombreJugador {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
 </style>
 </head>
 
@@ -100,7 +110,6 @@ input {
 
   <div id="jugadores"></div>
 
-  <!-- 🔥 NUEVO BOTÓN -->
   <button onclick="borrarHistorial()">🧹 Borrar historial</button>
 </div>
 
@@ -229,7 +238,7 @@ function agregarJugador(){
   let n=prompt("Nombre jugador");
   if(!n) return;
 
-  jugadores.push({nombre:n,AB:0,H:0,HR:0});
+  jugadores.push({nombre:n,AB:0,H:0,HR:0,BB:0});
   guardarEquipo();
   renderJugadores();
 }
@@ -261,12 +270,14 @@ function renderJugadores(){
     <div class="card">
       <button class="deleteBtn" onclick="eliminarJugador(${i})">X</button>
 
-      ${j.nombre}<br>
-      AB:${j.AB} H:${j.H} HR:${j.HR} AVG:${avg}<br>
+      <div class="nombreJugador">${j.nombre}</div>
+
+      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${j.BB} AVG:${avg}<br>
 
       <button class="out" onclick="out(${i})">OUT</button>
       <button class="hit" onclick="hit(${i})">HIT</button>
       <button class="hr" onclick="hr(${i})">HR</button>
+      <button class="bb" onclick="bb(${i})">BB</button>
     </div>`;
   });
 }
@@ -274,6 +285,7 @@ function renderJugadores(){
 function out(i){ jugadores[i].AB++; guardarEquipo(); renderJugadores();}
 function hit(i){ jugadores[i].AB++; jugadores[i].H++; guardarEquipo(); renderJugadores();}
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; guardarEquipo(); renderJugadores();}
+function bb(i){ jugadores[i].BB++; guardarEquipo(); renderJugadores();}
 
 /* HISTORIAL */
 function guardarDia(){
@@ -296,7 +308,6 @@ function verHistorial(){
   alert(txt);
 }
 
-/* 🔥 NUEVA FUNCIÓN */
 function borrarHistorial(){
   historial = [];
   guardarEquipo();
@@ -341,14 +352,12 @@ function rankingGlobal(){
   alert(txt);
 }
 
-/* PWA */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
 
-/* OTROS */
 function nuevaTemp(){
-  jugadores.forEach(j=>{j.AB=0;j.H=0;j.HR=0});
+  jugadores.forEach(j=>{j.AB=0;j.H=0;j.HR=0;j.BB=0});
   guardarEquipo();
   renderJugadores();
 }
