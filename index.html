@@ -63,11 +63,8 @@ input {
 .out { background:red; }
 .hit { background:#888; }
 .hr { background:green; }
-
-/* 🔥 NUEVO BB */
 .bb { background:#f1c40f; color:black; }
 
-/* 🔥 NOMBRE GRANDE */
 .nombreJugador {
   font-size: 26px;
   font-weight: bold;
@@ -265,6 +262,7 @@ function renderJugadores(){
 
   jugadores.forEach((j,i)=>{
     let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
+    let bb = j.BB || 0; // 🔥 FIX VISUAL
 
     div.innerHTML+=`
     <div class="card">
@@ -272,7 +270,7 @@ function renderJugadores(){
 
       <div class="nombreJugador">${j.nombre}</div>
 
-      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${j.BB} AVG:${avg}<br>
+      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${bb} AVG:${avg}<br>
 
       <button class="out" onclick="out(${i})">OUT</button>
       <button class="hit" onclick="hit(${i})">HIT</button>
@@ -285,7 +283,14 @@ function renderJugadores(){
 function out(i){ jugadores[i].AB++; guardarEquipo(); renderJugadores();}
 function hit(i){ jugadores[i].AB++; jugadores[i].H++; guardarEquipo(); renderJugadores();}
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; guardarEquipo(); renderJugadores();}
-function bb(i){ jugadores[i].BB++; guardarEquipo(); renderJugadores();}
+
+/* 🔥 FIX REAL */
+function bb(i){
+  if(!jugadores[i].BB) jugadores[i].BB = 0;
+  jugadores[i].BB++;
+  guardarEquipo();
+  renderJugadores();
+}
 
 /* HISTORIAL */
 function guardarDia(){
