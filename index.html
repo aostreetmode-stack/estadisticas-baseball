@@ -6,21 +6,36 @@
 
 <title>Estadísticas Softball</title>
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e2b3a">
+
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #1e2b3a;
+  background: linear-gradient(135deg, #1e2b3a, #24384f);
   color: white;
   text-align: center;
 }
 
+h1 {
+  margin-top: 15px;
+}
+
 button {
-  padding: 10px;
+  padding: 10px 15px;
   margin: 5px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
   font-weight: bold;
+  background: #4da3ff;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+button:hover {
+  background: #2d8cff;
 }
 
 .card {
@@ -28,19 +43,24 @@ button {
   margin: 10px;
   padding: 15px;
   border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
 }
 
 input {
-  padding: 10px;
-  border-radius: 10px;
+  padding: 12px;
+  border-radius: 12px;
   border: none;
   margin: 5px;
   width: 80%;
 }
 
-.out { background:red; color:white;}
-.hit { background:gray;}
-.hr { background:green; color:white;}
+.out { background:red; }
+.hit { background:#888; }
+.hr { background:green; }
+
+.topbar button {
+  background:#3a4f68;
+}
 </style>
 </head>
 
@@ -70,11 +90,14 @@ input {
 
   <button onclick="agregarJugador()">+ Jugador</button><br>
 
-  <button onclick="guardarDia()">Guardar día</button>
-  <button onclick="verHistorial()">Historial</button>
-  <button onclick="verRanking()">Ranking</button>
-  <button onclick="nuevaTemp()">Nueva temporada</button>
-  <button onclick="salir()">Salir</button>
+  <div class="topbar">
+    <button onclick="guardarDia()">Guardar día</button>
+    <button onclick="verHistorial()">Historial</button>
+    <button onclick="verRanking()">AVG</button>
+    <button onclick="rankingHR()">HR 🔥</button>
+    <button onclick="nuevaTemp()">Nueva temporada</button>
+    <button onclick="salir()">Salir</button>
+  </div>
 
   <div id="jugadores"></div>
 </div>
@@ -188,7 +211,6 @@ function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
   let eq = equipos[i];
 
-  // 🔥 ADMIN TOTAL ACCESS
   if(
     eq.owner !== usuario &&
     !(usuario === "ortelio.garciaulloa@gmail.com" && passActual === "AyO*9211")
@@ -285,9 +307,23 @@ function verRanking(){
     return B-A;
   });
 
-  let txt="Ranking:\n";
+  let txt="Ranking AVG:\n";
   lista.forEach((j,i)=>{
     txt+=(i+1)+". "+j.nombre+"\n";
+  });
+
+  alert(txt);
+}
+
+/* 🔥 NUEVO RANKING HR */
+function rankingHR(){
+  let lista=[...jugadores];
+
+  lista.sort((a,b)=> b.HR - a.HR);
+
+  let txt="🔥 Ranking HR:\n";
+  lista.forEach((j,i)=>{
+    txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n";
   });
 
   alert(txt);
@@ -313,6 +349,12 @@ function rankingGlobal(){
   });
 
   alert(txt);
+}
+
+/* ================= PWA ================= */
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
 }
 
 /* ================= OTROS ================= */
