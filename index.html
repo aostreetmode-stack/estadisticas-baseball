@@ -61,7 +61,7 @@ button {
   font-weight: bold;
 }
 
-/* 🔥 MODAL PRO */
+/* 🔥 MODAL */
 .modal {
   position: fixed;
   top:0;
@@ -95,7 +95,7 @@ button {
 .playerRow {
   display:flex;
   justify-content:space-between;
-  padding:4px 0;
+  padding:6px;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
@@ -143,7 +143,7 @@ button {
   <button onclick="borrarHistorial()">🧹 Borrar historial</button>
 </div>
 
-<!-- 🔥 MODAL -->
+<!-- MODAL -->
 <div id="modal" class="modal" onclick="cerrarModal()">
   <div class="modalContent" id="modalContent"></div>
 </div>
@@ -219,31 +219,13 @@ function renderEquipos(){
     <div class="card">
       ${e.nombre}<br>
       <button onclick="entrarEquipo(${i})">Entrar</button>
-      <button onclick="eliminarEquipo(${i})">❌</button>
     </div>`;
   });
-}
-
-function eliminarEquipo(i){
-  let equipos = JSON.parse(localStorage.getItem("equipos"));
-
-  if(usuario!=="ortelio.garciaulloa@gmail.com" || passActual!=="AyO*9211"){
-    return alert("No tienes permiso");
-  }
-
-  equipos.splice(i,1);
-  localStorage.setItem("equipos",JSON.stringify(equipos));
-  renderEquipos();
 }
 
 function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
   let eq = equipos[i];
-
-  if(eq.owner !== usuario &&
-     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")){
-    return alert("No puedes entrar");
-  }
 
   equipoActual=i;
   jugadores=eq.jugadores||[];
@@ -303,16 +285,18 @@ function hit(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].dia.AB++; jug
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; jugadores[i].dia.AB++; jugadores[i].dia.H++; jugadores[i].dia.HR++; guardarEquipo(); renderJugadores();}
 function bb(i){ jugadores[i].BB++; jugadores[i].dia.BB++; guardarEquipo(); renderJugadores();}
 
-/* 🔥 HISTORIAL PRO */
+/* 🔥 HISTORIAL ARREGLADO */
 function verHistorial(){
   if(historial.length==0) return alert("No hay historial");
 
   let html="";
 
   historial.forEach(d=>{
+
     html+=`<div class="diaBox"><h3>📅 ${d.fecha}</h3>`;
 
     let lista=[...d.jugadores];
+
     lista.sort((a,b)=>{
       let A=a.AB?a.H/a.AB:0;
       let B=b.AB?b.H/b.AB:0;
@@ -321,6 +305,7 @@ function verHistorial(){
 
     lista.forEach((j,i)=>{
       let avg = j.AB ? (j.H/j.AB).toFixed(3) : "0.000";
+
       html+=`
       <div class="playerRow ${i==0?'top':''}">
         <span>${i+1}. ${j.nombre}</span>
@@ -339,7 +324,7 @@ function cerrarModal(){
   modal.style.display="none";
 }
 
-/* RESTO IGUAL */
+/* RESTO */
 function guardarDia(){
   let fecha = new Date().toLocaleDateString();
 
@@ -367,58 +352,6 @@ function borrarHistorial(){
   guardarEquipo();
   alert("Historial borrado");
 }
-
-function verRanking(){
-  let lista=[...jugadores];
-  lista.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
-
-  let txt="AVG:\n";
-  lista.forEach((j,i)=>{
-    let avg=j.AB?(j.H/j.AB).toFixed(3):0;
-    txt+=(i+1)+". "+j.nombre+" ("+avg+")\n";
-  });
-
-  alert(txt);
-}
-
-function rankingHR(){
-  let lista=[...jugadores];
-  lista.sort((a,b)=>b.HR-a.HR);
-
-  let txt="HR:\n";
-  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n");
-
-  alert(txt);
-}
-
-function rankingGlobal(){
-  let equipos = JSON.parse(localStorage.getItem("equipos"))||[];
-  let todos=[];
-
-  equipos.forEach(e=> e.jugadores.forEach(j=>todos.push(j)));
-
-  todos.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
-
-  let txt="GLOBAL:\n";
-  todos.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+"\n");
-
-  alert(txt);
-}
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-
-function nuevaTemp(){
-  jugadores.forEach(j=>{
-    j.AB=0;j.H=0;j.HR=0;j.BB=0;
-    j.dia={AB:0,H:0,HR:0,BB:0};
-  });
-  guardarEquipo();
-  renderJugadores();
-}
-
-function salir(){ location.reload(); }
 </script>
 
 </body>
