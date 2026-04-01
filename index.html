@@ -51,14 +51,6 @@ button {
   font-weight:bold;
 }
 
-input {
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  margin: 5px;
-  width: 80%;
-}
-
 .out { background:red; }
 .hit { background:#888; }
 .hr { background:green; }
@@ -67,6 +59,49 @@ input {
 .nombreJugador {
   font-size: 26px;
   font-weight: bold;
+}
+
+/* 🔥 MODAL PRO */
+.modal {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.8);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+
+.modalContent {
+  background:#1f2f44;
+  padding:20px;
+  border-radius:15px;
+  width:90%;
+  max-height:80%;
+  overflow:auto;
+  text-align:left;
+}
+
+.diaBox {
+  background:#2e3f55;
+  margin-bottom:15px;
+  padding:10px;
+  border-radius:10px;
+}
+
+.playerRow {
+  display:flex;
+  justify-content:space-between;
+  padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.top {
+  color:#00ffcc;
+  font-weight:bold;
 }
 </style>
 </head>
@@ -106,6 +141,11 @@ input {
   <div id="jugadores"></div>
 
   <button onclick="borrarHistorial()">🧹 Borrar historial</button>
+</div>
+
+<!-- 🔥 MODAL -->
+<div id="modal" class="modal" onclick="cerrarModal()">
+  <div class="modalContent" id="modalContent"></div>
 </div>
 
 <script>
@@ -200,10 +240,8 @@ function entrarEquipo(i){
   let equipos = JSON.parse(localStorage.getItem("equipos"));
   let eq = equipos[i];
 
-  if(
-    eq.owner !== usuario &&
-    !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
-  ){
+  if(eq.owner !== usuario &&
+     !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")){
     return alert("No puedes entrar");
   }
 
@@ -240,42 +278,16 @@ function agregarJugador(){
   renderJugadores();
 }
 
-function eliminarJugador(i){
-  let equipos = JSON.parse(localStorage.getItem("equipos"));
-  let eq = equipos[equipoActual];
-
-  if(
-    eq.owner !== usuario &&
-    !(usuario==="ortelio.garciaulloa@gmail.com" && passActual==="AyO*9211")
-  ){
-    return alert("No puedes borrar jugadores");
-  }
-
-  jugadores.splice(i,1);
-  guardarEquipo();
-  renderJugadores();
-}
-
 function renderJugadores(){
-  jugadoresDiv = document.getElementById("jugadores");
   jugadoresDiv.innerHTML="";
 
   jugadores.forEach((j,i)=>{
-
-    if(!j.dia){
-      j.dia={AB:0,H:0,HR:0,BB:0};
-    }
-
     let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
-    let bb = j.BB || 0;
 
     jugadoresDiv.innerHTML+=`
     <div class="card">
-      <button class="deleteBtn" onclick="eliminarJugador(${i})">X</button>
-
       <div class="nombreJugador">${j.nombre}</div>
-
-      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${bb} AVG:${avg}<br>
+      AB:${j.AB} H:${j.H} HR:${j.HR} BB:${j.BB} AVG:${avg}<br>
 
       <button class="out" onclick="out(${i})">OUT</button>
       <button class="hit" onclick="hit(${i})">HIT</button>
@@ -286,46 +298,49 @@ function renderJugadores(){
 }
 
 /* ACCIONES */
-function out(i){
-  jugadores[i].AB++;
-  jugadores[i].dia.AB++;
-  guardarEquipo();
-  renderJugadores();
+function out(i){ jugadores[i].AB++; jugadores[i].dia.AB++; guardarEquipo(); renderJugadores();}
+function hit(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].dia.AB++; jugadores[i].dia.H++; guardarEquipo(); renderJugadores();}
+function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; jugadores[i].dia.AB++; jugadores[i].dia.H++; jugadores[i].dia.HR++; guardarEquipo(); renderJugadores();}
+function bb(i){ jugadores[i].BB++; jugadores[i].dia.BB++; guardarEquipo(); renderJugadores();}
+
+/* 🔥 HISTORIAL PRO */
+function verHistorial(){
+  if(historial.length==0) return alert("No hay historial");
+
+  let html="";
+
+  historial.forEach(d=>{
+    html+=`<div class="diaBox"><h3>📅 ${d.fecha}</h3>`;
+
+    let lista=[...d.jugadores];
+    lista.sort((a,b)=>{
+      let A=a.AB?a.H/a.AB:0;
+      let B=b.AB?b.H/b.AB:0;
+      return B-A;
+    });
+
+    lista.forEach((j,i)=>{
+      let avg = j.AB ? (j.H/j.AB).toFixed(3) : "0.000";
+      html+=`
+      <div class="playerRow ${i==0?'top':''}">
+        <span>${i+1}. ${j.nombre}</span>
+        <span>${avg}</span>
+      </div>`;
+    });
+
+    html+="</div>";
+  });
+
+  modalContent.innerHTML = html;
+  modal.style.display="flex";
 }
 
-function hit(i){
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  jugadores[i].dia.AB++;
-  jugadores[i].dia.H++;
-  guardarEquipo();
-  renderJugadores();
+function cerrarModal(){
+  modal.style.display="none";
 }
 
-function hr(i){
-  jugadores[i].AB++;
-  jugadores[i].H++;
-  jugadores[i].HR++;
-  jugadores[i].dia.AB++;
-  jugadores[i].dia.H++;
-  jugadores[i].dia.HR++;
-  guardarEquipo();
-  renderJugadores();
-}
-
-function bb(i){
-  if(!jugadores[i].BB) jugadores[i].BB = 0;
-  jugadores[i].BB++;
-
-  jugadores[i].dia.BB++;
-
-  guardarEquipo();
-  renderJugadores();
-}
-
-/* HISTORIAL */
+/* RESTO IGUAL */
 function guardarDia(){
-
   let fecha = new Date().toLocaleDateString();
 
   let resumen = {
@@ -341,28 +356,10 @@ function guardarDia(){
 
   historial.push(resumen);
 
-  jugadores.forEach(j=>{
-    j.dia={AB:0,H:0,HR:0,BB:0};
-  });
+  jugadores.forEach(j=> j.dia={AB:0,H:0,HR:0,BB:0});
 
   guardarEquipo();
-  alert("Día guardado correctamente");
-}
-
-function verHistorial(){
-  if(historial.length==0) return alert("No hay historial");
-
-  let txt="📅 HISTORIAL\n\n";
-
-  historial.forEach(d=>{
-    txt+=d.fecha+"\n";
-    d.jugadores.forEach(j=>{
-      txt+=`${j.nombre} → H:${j.H} HR:${j.HR} BB:${j.BB}\n`;
-    });
-    txt+="\n";
-  });
-
-  alert(txt);
+  alert("Día guardado");
 }
 
 function borrarHistorial(){
@@ -371,18 +368,11 @@ function borrarHistorial(){
   alert("Historial borrado");
 }
 
-/* RANKINGS */
 function verRanking(){
   let lista=[...jugadores];
+  lista.sort((a,b)=> (b.H/b.AB||0)-(a.H/a.AB||0));
 
-  lista.sort((a,b)=>{
-    let A=a.AB?a.H/a.AB:0;
-    let B=b.AB?b.H/b.AB:0;
-    return B-A;
-  });
-
-  let txt="AVG TOTAL:\n";
-
+  let txt="AVG:\n";
   lista.forEach((j,i)=>{
     let avg=j.AB?(j.H/j.AB).toFixed(3):0;
     txt+=(i+1)+". "+j.nombre+" ("+avg+")\n";
@@ -393,14 +383,10 @@ function verRanking(){
 
 function rankingHR(){
   let lista=[...jugadores];
-
   lista.sort((a,b)=>b.HR-a.HR);
 
-  let txt="HR TOTAL:\n";
-
-  lista.forEach((j,i)=>{
-    txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n";
-  });
+  let txt="HR:\n";
+  lista.forEach((j,i)=> txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n");
 
   alert(txt);
 }
@@ -419,12 +405,10 @@ function rankingGlobal(){
   alert(txt);
 }
 
-/* PWA */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
 
-/* OTROS */
 function nuevaTemp(){
   jugadores.forEach(j=>{
     j.AB=0;j.H=0;j.HR=0;j.BB=0;
