@@ -103,6 +103,11 @@ button {
   font-weight:bold;
 }
 </style>
+
+<!-- 🔥 FIREBASE CDN -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 </head>
 
 <body>
@@ -146,11 +151,9 @@ button {
   <div class="modalContent" id="modalContent"></div>
 </div>
 
-<!-- 🔥 FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script>
 
+// 🔥 CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
   authDomain: "softball-stats-44e46.firebaseapp.com",
@@ -160,16 +163,10 @@ const firebaseConfig = {
   appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// 🔥 INICIAR FIREBASE
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-window.db = db;
-window.addDoc = addDoc;
-window.collection = collection;
-window.firebaseReady = true; // 🔥 FIX
-</script>
-
-<script>
 let usuario = null;
 let passActual = null;
 let equipoActual = null;
@@ -219,27 +216,19 @@ function crearEquipo(){
 
   let equipos = JSON.parse(localStorage.getItem("equipos"))||[];
 
-  equipos.push({
+  let nuevoEquipo = {
     nombre,
     jugadores:[],
     historial:[],
-    owner:usuario,
-    pass:passActual
-  });
+    owner:usuario
+  };
+
+  equipos.push(nuevoEquipo);
 
   localStorage.setItem("equipos",JSON.stringify(equipos));
 
-  // 🔥 FIX FIREBASE
-  if(window.firebaseReady){
-    window.addDoc(window.collection(window.db, "equipos"), {
-      nombre: nombre,
-      owner: usuario
-    }).then(()=>{
-      console.log("Guardado en Firebase");
-    }).catch((e)=>{
-      console.error("Error:", e);
-    });
-  }
+  // 🔥 GUARDAR EN FIREBASE
+  db.collection("equipos").add(nuevoEquipo);
 
   renderEquipos();
 }
@@ -278,15 +267,13 @@ function guardarEquipo(){
   equipos[equipoActual].historial=historial;
   localStorage.setItem("equipos",JSON.stringify(equipos));
 
-  // 🔥 GUARDAR EN FIREBASE (SIN TOCAR NADA MÁS)
-  if(window.db){
-    addDoc(collection(window.db, "equipos"), {
-      nombre: equipos[equipoActual].nombre,
-      jugadores: jugadores,
-      historial: historial,
-      owner: usuario
-    });
-  }
+  // 🔥 ACTUALIZAR EN FIREBASE
+  db.collection("equipos").add({
+    nombre: equipos[equipoActual].nombre,
+    jugadores: jugadores,
+    historial: historial,
+    owner: usuario
+  });
 }
 
 /* JUGADORES */
@@ -394,6 +381,9 @@ function borrarHistorial(){
   guardarEquipo();
   alert("Historial borrado");
 }
+
+function salir(){ location.reload(); }
+
 </script>
 
 </body>
