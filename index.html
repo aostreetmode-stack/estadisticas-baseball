@@ -61,7 +61,6 @@ button {
   font-weight: bold;
 }
 
-/* 🔥 MODAL */
 .modal {
   position: fixed;
   top:0;
@@ -143,7 +142,6 @@ button {
   <button onclick="borrarHistorial()">🧹 Borrar historial</button>
 </div>
 
-<!-- MODAL -->
 <div id="modal" class="modal" onclick="cerrarModal()">
   <div class="modalContent" id="modalContent"></div>
 </div>
@@ -168,6 +166,7 @@ const db = getFirestore(app);
 window.db = db;
 window.addDoc = addDoc;
 window.collection = collection;
+window.firebaseReady = true; // 🔥 FIX
 </script>
 
 <script>
@@ -230,11 +229,17 @@ function crearEquipo(){
 
   localStorage.setItem("equipos",JSON.stringify(equipos));
 
-  // 🔥 GUARDAR EN FIREBASE
-  addDoc(collection(db, "equipos"), {
-    nombre: nombre,
-    owner: usuario
-  });
+  // 🔥 FIX FIREBASE
+  if(window.firebaseReady){
+    window.addDoc(window.collection(window.db, "equipos"), {
+      nombre: nombre,
+      owner: usuario
+    }).then(()=>{
+      console.log("Guardado en Firebase");
+    }).catch((e)=>{
+      console.error("Error:", e);
+    });
+  }
 
   renderEquipos();
 }
