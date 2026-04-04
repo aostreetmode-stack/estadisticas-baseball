@@ -277,6 +277,16 @@ function guardarEquipo(){
   equipos[equipoActual].jugadores=jugadores;
   equipos[equipoActual].historial=historial;
   localStorage.setItem("equipos",JSON.stringify(equipos));
+
+  // 🔥 GUARDAR EN FIREBASE (SIN TOCAR NADA MÁS)
+  if(window.db){
+    addDoc(collection(window.db, "equipos"), {
+      nombre: equipos[equipoActual].nombre,
+      jugadores: jugadores,
+      historial: historial,
+      owner: usuario
+    });
+  }
 }
 
 /* JUGADORES */
