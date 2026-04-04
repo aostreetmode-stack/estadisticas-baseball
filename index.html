@@ -234,7 +234,13 @@ function crearEquipo(){
   localStorage.setItem("equipos",JSON.stringify(equipos));
 
   // 🔥 GUARDAR EN FIREBASE
-  db.collection("equipos").add(nuevoEquipo);
+if(db){
+  db.collection("equipos").add(nuevoEquipo)
+    .then(()=>console.log("✅ Guardado"))
+    .catch(e=>console.log("❌ Error:", e));
+}else{
+  console.log("❌ Firebase no listo");
+}
 
   renderEquipos();
 }
