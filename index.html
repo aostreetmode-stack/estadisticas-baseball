@@ -164,14 +164,20 @@ const firebaseConfig = {
 };
 
 // 🔥 INICIAR FIREBASE
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db;
 
-let usuario = null;
-let passActual = null;
-let equipoActual = null;
-let jugadores = [];
-let historial = [];
+function iniciarFirebase(){
+  if(typeof firebase !== "undefined"){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    console.log("🔥 Firebase listo");
+  } else {
+    console.log("⏳ Esperando Firebase...");
+    setTimeout(iniciarFirebase, 500);
+  }
+}
+
+iniciarFirebase();
 
 /* LOGIN */
 function login(){
