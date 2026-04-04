@@ -36,12 +36,19 @@ button {
   position: relative;
 }
 
-input {
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  margin: 5px;
-  width: 80%;
+.deleteBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
 }
 
 .out { background:red; }
@@ -54,17 +61,18 @@ input {
   font-weight: bold;
 }
 
-/* MODAL PRO */
+/* 🔥 MODAL */
 .modal {
   position: fixed;
   top:0;
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.8);
   display:none;
   align-items:center;
   justify-content:center;
+  z-index:999;
 }
 
 .modalContent {
@@ -74,12 +82,20 @@ input {
   width:90%;
   max-height:80%;
   overflow:auto;
+  text-align:left;
+}
+
+.diaBox {
+  background:#2e3f55;
+  margin-bottom:15px;
+  padding:10px;
+  border-radius:10px;
 }
 
 .playerRow {
   display:flex;
   justify-content:space-between;
-  padding:8px;
+  padding:6px;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
@@ -106,6 +122,7 @@ input {
 <div id="equipos" style="display:none;">
   <h2>Equipos</h2>
   <button onclick="crearEquipo()">+ Crear equipo</button>
+  <button onclick="rankingGlobal()">🏆 Ranking Global</button>
   <div id="listaEquipos"></div>
 </div>
 
@@ -118,9 +135,12 @@ input {
   <button onclick="verHistorial()">Historial</button>
   <button onclick="verRanking()">AVG</button>
   <button onclick="rankingHR()">HR 🔥</button>
+  <button onclick="nuevaTemp()">Nueva temporada</button>
   <button onclick="salir()">Salir</button>
 
   <div id="jugadores"></div>
+
+  <button onclick="borrarHistorial()">🧹 Borrar historial</button>
 </div>
 
 <!-- MODAL -->
@@ -129,10 +149,10 @@ input {
 </div>
 
 <!-- 🔥 FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<script>
 const firebaseConfig = {
   apiKey: "AIzaSyCDF4CBmDYdhWWdML55_mh4x4wUpTp2-tg",
   authDomain: "softball-stats-44e46.firebaseapp.com",
@@ -142,53 +162,47 @@ const firebaseConfig = {
   appId: "1:239247616602:web:5606cc1c8d25f99d20c663"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-/* VARIABLES */
+window.db = db;
+window.addDoc = addDoc;
+window.collection = collection;
+</script>
+
+<script>
 let usuario = null;
+let passActual = null;
 let equipoActual = null;
 let jugadores = [];
 let historial = [];
 
-/* LOGIN REAL */
+/* LOGIN */
 function login(){
   let e = emailInput.value;
   let p = passInput.value;
-
   if(!e || !p) return alert("Llena todo");
 
-  auth.signInWithEmailAndPassword(e,p)
-    .then(()=>{
-      usuario = e;
-      entrarEquipos();
-    })
-    .catch(err=>{
-      alert(err.message);
-    });
+  usuario = e;
+  passActual = p;
+  setTimeout(()=>entrarEquipos(),100);
 }
 
-/* CREAR CUENTA REAL */
 function crearCuenta(){
   let e = emailInput.value;
   let p = passInput.value;
-
   if(!e || !p) return alert("Llena todo");
 
-  auth.createUserWithEmailAndPassword(e,p)
-    .then(()=>{
-      usuario = e;
-      alert("Cuenta creada");
-      entrarEquipos();
-    })
-    .catch(err=>{
-      alert(err.message);
-    });
+  usuario = e;
+  passActual = p;
+  alert("Cuenta creada");
+  setTimeout(()=>entrarEquipos(),100);
 }
 
 function invitado(){
   usuario = "invitado";
-  entrarEquipos();
+  passActual = null;
+  setTimeout(()=>entrarEquipos(),100);
 }
 
 /* EQUIPOS */
@@ -199,6 +213,8 @@ function entrarEquipos(){
 }
 
 function crearEquipo(){
+  if(usuario==="invitado") return alert("Invitado no puede crear");
+
   let nombre = prompt("Nombre equipo");
   if(!nombre) return;
 
@@ -207,10 +223,19 @@ function crearEquipo(){
   equipos.push({
     nombre,
     jugadores:[],
-    historial:[]
+    historial:[],
+    owner:usuario,
+    pass:passActual
   });
 
   localStorage.setItem("equipos",JSON.stringify(equipos));
+
+  // 🔥 GUARDAR EN FIREBASE
+  addDoc(collection(db, "equipos"), {
+    nombre: nombre,
+    owner: usuario
+  });
+
   renderEquipos();
 }
 
@@ -268,7 +293,7 @@ function renderJugadores(){
   jugadoresDiv.innerHTML="";
 
   jugadores.forEach((j,i)=>{
-    let avg = j.AB ? (j.H/j.AB).toFixed(3) : "0.000";
+    let avg = j.AB ? (j.H/j.AB).toFixed(3) : 0;
 
     jugadoresDiv.innerHTML+=`
     <div class="card">
@@ -289,14 +314,14 @@ function hit(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].dia.AB++; jug
 function hr(i){ jugadores[i].AB++; jugadores[i].H++; jugadores[i].HR++; jugadores[i].dia.AB++; jugadores[i].dia.H++; jugadores[i].dia.HR++; guardarEquipo(); renderJugadores();}
 function bb(i){ jugadores[i].BB++; jugadores[i].dia.BB++; guardarEquipo(); renderJugadores();}
 
-/* HISTORIAL PRO + ORDENADO */
+/* HISTORIAL */
 function verHistorial(){
+  if(historial.length==0) return alert("No hay historial");
 
   let html="";
 
   historial.forEach(d=>{
-
-    html+=`<h3>📅 ${d.fecha}</h3>`;
+    html+=`<div class="diaBox"><h3>📅 ${d.fecha}</h3>`;
 
     let lista=[...d.jugadores];
 
@@ -315,6 +340,8 @@ function verHistorial(){
         <span>${avg}</span>
       </div>`;
     });
+
+    html+="</div>";
   });
 
   modalContent.innerHTML = html;
@@ -325,7 +352,6 @@ function cerrarModal(){
   modal.style.display="none";
 }
 
-/* GUARDAR DIA */
 function guardarDia(){
   let fecha = new Date().toLocaleDateString();
 
@@ -348,40 +374,11 @@ function guardarDia(){
   alert("Día guardado");
 }
 
-/* RANKING */
-function verRanking(){
-  let lista=[...jugadores];
-
-  lista.sort((a,b)=>{
-    let A=a.AB?a.H/a.AB:0;
-    let B=b.AB?b.H/b.AB:0;
-    return B-A;
-  });
-
-  let txt="AVG:\n";
-
-  lista.forEach((j,i)=>{
-    let avg=j.AB?(j.H/j.AB).toFixed(3):0;
-    txt+=(i+1)+". "+j.nombre+" ("+avg+")\n";
-  });
-
-  alert(txt);
+function borrarHistorial(){
+  historial=[];
+  guardarEquipo();
+  alert("Historial borrado");
 }
-
-function rankingHR(){
-  let lista=[...jugadores];
-  lista.sort((a,b)=>b.HR-a.HR);
-
-  let txt="HR:\n";
-
-  lista.forEach((j,i)=>{
-    txt+=(i+1)+". "+j.nombre+" ("+j.HR+")\n";
-  });
-
-  alert(txt);
-}
-
-function salir(){ location.reload(); }
 </script>
 
 </body>
